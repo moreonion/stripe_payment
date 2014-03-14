@@ -141,5 +141,3 @@ function configuration_form_validate(array $element, array &$form_state) {
   $form_state['payment_method']->controller_data['private_key'] = $values['private_key'];
   $form_state['payment_method']->controller_data['public_key'] = $values['public_key'];
 }
-
-}
