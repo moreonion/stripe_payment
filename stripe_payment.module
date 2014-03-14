@@ -20,9 +20,9 @@ function stripe_payment_libraries_info() {
     'vendor url' => 'https://stripe.com//',
     'download url' => 'https://github.com/stripe/stripe-php',
     'version' => '1.11.0',
-    'xautoload' => function($api) {
-      $api->namespaceRoot('Stripe');
-    },
+    'files' => array(
+      'php' => array('lib/Stripe.php')
+    )
   );
   return $libraries;
 }
