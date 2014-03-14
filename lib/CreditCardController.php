@@ -2,7 +2,7 @@
 
 namespace Drupal\stripe_payment;
 
-class CreditCardController implements \Drupal\webform_paymethod_select\PaymentRecurrentController {
+class CreditCardController extends \PaymentMethodController implements \Drupal\webform_paymethod_select\PaymentRecurrentController {
   public $controller_data_defaults = array(
     'private_key' => '',
     'public_key'  => '',
