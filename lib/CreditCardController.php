@@ -49,7 +49,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
   public static function load($entities) {
     $pmids = array();
     foreach ($entities as $method) {
-      if ($method->controller instanceof CommonController) {
+      if ($method->controller instanceof CreditCardController) {
         $pmids[] = $method->pmid;
       }
     }
