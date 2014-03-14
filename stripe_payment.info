@@ -1,0 +1,9 @@
+name = Stripe Payment methods
+description = Provides payment methods to transfer money using the payment provider www.stripe.com
+core = 7.x
+
+dependencies[] = payment
+dependencies[] = payment_forms
+dependencies[] = xautoload
+dependencies[] = webform_paymethod_select
+dependencies[] = libraries

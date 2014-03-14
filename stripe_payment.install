@@ -1,0 +1,36 @@
+<?php
+
+/**
+ * @file
+ * Installation and uninstallation functions.
+ */
+
+/**
+ * Implements hook_schema()
+ *
+ * Adds the schema for the stripe_payment_payment_controllers table which
+ * stores serialized PaymentMethodController objects.
+ */
+function stripe_payment_schema() {
+  $schema['stripe_payment_payment_method_controller'] = array(
+    'fields' => array(
+      'public_key' => array(
+        'type' => 'text',
+      ),
+      'private_key' => array(
+        'type'     => 'text',
+      ),
+      'pmid' => array(
+        'type'     => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default'  => 0,
+      ),
+    ),
+    'primary key' => array('pmid'),
+    'unique keys' => array(
+      'pmid' => array('pmid'),
+    ),
+  );
+  return $schema;
+}
