@@ -17,13 +17,6 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
 
   }
 
-  public function validate(\Payment $payment, \PaymentMethod $payment_method, $strict) {
-    // convert amount to cents.
-    foreach ($payment->line_items as $name => &$line_item) {
-      $line_item->amount = $line_item->amount * 100;
-    }
-  }
-
   public function execute(\Payment $payment) {
     libraries_load('stripe-php');
 
@@ -31,10 +24,99 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     $api_key = $payment->method->controller_data['private_key'];
 
     switch ($context->value('donation_interval')) {
-      case 'm': $interval = '1 MONTH'; break;
-      case 'y': $interval = '1 YEAR'; break;
+      case 'm': $interval = 'month'; break;
+      case 'y': $interval = 'year'; break;
       default:  $interval = NULL; break;
     }
+
+    try {
+      \Stripe::setApiKey($api_key);
+      \Stripe::setApiVersion('2014-01-31');
+
+      $customer = $this->createCustomer(
+        $this->getName($context),
+        $context->value('email')
+      );
+      $card = $this->createCard($customer, $payment);
+
+      if (!$interval) {
+        $charge = $this->createCharge($customer, $payment);
+      } else {
+        $plan = $this->createPlan($customer, $payment, $interval);
+        $subscription = $this->createSubscription($customer, $plan);
+      }
+
+      $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_SUCCESS));
+      entity_save('payment', $payment);
+    }
+    catch(\Stripe_Error $e) {
+      $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
+      entity_save('payment', $payment);
+
+      $message = t(
+        '@method payment method encountered an error while contacting ' .
+        'the stripe server. The status code "@status" and the error ' .
+        'message "@message". (pid: @pid, pmid: @pmid)',
+        array(
+          '@status'   => $e->getHttpStatus(),
+          '@message'  => $e->getMessage(),
+          '@pid'      => $payment->pid,
+          '@pmid'     => $payment->method->pmid,
+          '@method'   => $payment->method->title_specific,
+        ));
+      throw new \PaymentException($message);
+    }
+  }
+
+
+  public function createCustomer($description, $email) {
+    return \Stripe_Customer::create(array(
+        'description' => $description,
+        'email'       => $email
+      ));
+  }
+
+  public function createCard($customer, $payment) {
+    $method_data = &$payment->method_data;
+
+    // a guard to prevent the later ->format() to fail
+    $expiry = $method_data['expiry_date'];
+    if (get_class($expiry) != "DateTime") { $expiry = date_create(); }
+
+    $customer->cards->create(array(
+        "card" => array(
+          'number'    => $method_data['credit_card_number'],
+          'exp_month' => (int) $expiry->format('m'),
+          'exp_year'  => (int) $expiry->format('Y')
+        )));
+  }
+
+  public function createCharge($customer, $payment) {
+    return \Stripe_Charge::create(array(
+        'customer' => $customer->id,
+        'amount'   => $payment->totalAmount(0),
+        'currency' => $payment->currency_code
+      ));
+  }
+
+  public function createPlan($customer, $payment, $interval) {
+    $amount = $payment->totalAmount(0);
+    $currency = $payment->currency_code;
+    $description = $customer->email . ' donates ' . ($amount/100) . ' ' .
+      $currency . ' ';
+
+    return \Stripe_Plan::create(array(
+        // add a timestamp to the id to it unique for recurring customers.
+        'id'       => $description . date("Y-m-d H:i:s"),
+        'amount'   => $amount,
+        'interval' => $interval,
+        'name'     => $description . 'every ' . $interval . '.',
+        'currency' => $currency,
+      ));
+  }
+
+  public function createSubscription($customer, $plan) {
+    return $customer->subscriptions->create(array('plan' => $plan->id));
   }
 
   public function getName($context) {
