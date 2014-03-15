@@ -14,7 +14,13 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
 
     $this->payment_configuration_form_elements_callback = 'payment_forms_method_form';
     $this->payment_method_configuration_form_elements_callback = '\Drupal\stripe_payment\configuration_form';
+  }
 
+  public function validate(\Payment $payment, \PaymentMethod $payment_method, $strict) {
+    // convert amount to cents.
+    foreach ($payment->line_items as $name => &$line_item) {
+      $line_item->amount = $line_item->amount * 100;
+    }
   }
 
   public function execute(\Payment $payment) {
