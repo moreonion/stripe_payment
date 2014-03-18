@@ -10,7 +10,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
 
   public function __construct() {
     $this->title = t('Stripe Credit Card');
-    $this->form = new \Drupal\payment_forms\CreditCardForm();
+    $this->form = new \Drupal\stripe_payment\CreditCardForm();
 
     $this->payment_configuration_form_elements_callback = 'payment_forms_method_form';
     $this->payment_method_configuration_form_elements_callback = '\Drupal\stripe_payment\configuration_form';
