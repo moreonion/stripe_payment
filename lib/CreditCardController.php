@@ -93,7 +93,8 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
         "card" => array(
           'number'    => $method_data['credit_card_number'],
           'exp_month' => (int) $expiry->format('m'),
-          'exp_year'  => (int) $expiry->format('Y')
+          'exp_year'  => (int) $expiry->format('Y'),
+	  'cvc'       => $method_data['secure_code'],
         )));
   }
 
