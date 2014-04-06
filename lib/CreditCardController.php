@@ -48,8 +48,8 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       if (!$interval) {
         $charge = $this->createCharge($customer, $payment);
       } else {
-        $plan = $this->createPlan($customer, $payment, $interval);
-        $subscription = $this->createSubscription($customer, $plan);
+        $plan_id = $this->createPlan($customer, $payment, $interval);
+        $subscription = $this->createSubscription($customer, $plan_id);
       }
 
       $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_SUCCESS));
@@ -112,18 +112,38 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     $description = $customer->email . ' donates ' . ($amount/100) . ' ' .
       $currency . ' ';
 
-    return \Stripe_Plan::create(array(
+    $existing_id = db_select('stripe_payment_plans', 'p')
+      ->fields('p', array('id'))
+      ->condition('payment_interval', $interval)
+      ->condition('amount', $amount)
+      ->condition('currency', $currency)
+      ->execute()
+      ->fetchField();
+
+    if ($existing_id) {
+      return $existing_id;
+    } else {
+      $params = array(
         // add a timestamp to the id to it unique for recurring customers.
         'id'       => $description . date("Y-m-d H:i:s"),
         'amount'   => $amount,
-        'interval' => $interval,
+        'payment_interval' => $interval,
         'name'     => $description . 'every ' . $interval . '.',
         'currency' => $currency,
-      ));
+      );
+      drupal_write_record('stripe_payment_plans', $params);
+
+      // This ugly hack is necessary because 'interval' is a reserved keyword
+      // in mysql and drupal does not enclose the field names in '"'.
+      $params['interval'] = $params['payment_interval'];
+      unset($params['payment_interval']);
+      unset($params['pid']);
+      return \Stripe_Plan::create($params)->id;
+    }
   }
 
-  public function createSubscription($customer, $plan) {
-    return $customer->subscriptions->create(array('plan' => $plan->id));
+  public function createSubscription($customer, $plan_id) {
+    return $customer->subscriptions->create(array('plan' => $plan_id));
   }
 
   public function getName($context) {
