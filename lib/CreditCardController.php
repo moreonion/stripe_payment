@@ -16,13 +16,6 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     $this->payment_method_configuration_form_elements_callback = '\Drupal\stripe_payment\configuration_form';
   }
 
-  public function validate(\Payment $payment, \PaymentMethod $payment_method, $strict) {
-    // convert amount to cents.
-    foreach ($payment->line_items as $name => &$line_item) {
-      $line_item->amount = $line_item->amount * 100;
-    }
-  }
-
   public function execute(\Payment $payment) {
     libraries_load('stripe-php');
 
@@ -98,16 +91,21 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
         )));
   }
 
+  public function getTotalAmount(\Payment $payment) {
+    // convert amount to cents. Integer value.
+    return (int) ($payment->totalAmount(0) * 100);
+  }
+
   public function createCharge($customer, $payment) {
     return \Stripe_Charge::create(array(
         'customer' => $customer->id,
-        'amount'   => $payment->totalAmount(0),
+        'amount'   => $this->getTotalAmount($payment),
         'currency' => $payment->currency_code
       ));
   }
 
   public function createPlan($customer, $payment, $interval) {
-    $amount = $payment->totalAmount(0);
+    $amount = $this->getTotalAmount($payment);
     $currency = $payment->currency_code;
     $description = $customer->email . ' donates ' . ($amount/100) . ' ' .
       $currency . ' ';
