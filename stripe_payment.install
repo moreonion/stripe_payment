@@ -76,7 +76,48 @@ function stripe_payment_schema() {
       'id' => array('id'),
     ),
   );
+  $schema['stripe_payment'] = array(
+    'fields' => array(
+     'pid' => array(
+        'description' => 'The payment id.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'stripe_id' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'type' => array(
+        'type'     => 'varchar',
+        'length' => 16,
+        'default'  => '',
+        'not null' => TRUE,
+      ),
+      'plan_id' => array(
+        'type'   => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('pid'),
+    'unique keys' => array(
+      'pid' => array('pid'),
+      'stripe_id' => array('stripe_id'),
+    ),
+  );
   return $schema;
+}
+
+/**
+ * Add stripe_payment table
+ */
+function stripe_payment_update_7002() {
+  $schema = stripe_payment_schema();
+  db_create_table('stripe_payment', $schema['stripe_payment']);
 }
 
 /**

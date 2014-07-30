@@ -38,15 +38,24 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       );
       $card = $this->createCard($customer, $payment);
 
+      $stripe  = NULL;
+      $plan_id = NULL;
       if (!$interval) {
-        $charge = $this->createCharge($customer, $payment);
+        $stripe = $this->createCharge($customer, $payment);
       } else {
         $plan_id = $this->createPlan($customer, $payment, $interval);
-        $subscription = $this->createSubscription($customer, $plan_id);
+        $stripe  = $this->createSubscription($customer, $plan_id);
       }
 
       $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_SUCCESS));
       entity_save('payment', $payment);
+      $params = array(
+        'pid'       => $payment->pid,
+        'stripe_id' => $stripe->id,
+        'type'      => $stripe->object,
+        'plan_id'   => $plan_id,
+      );
+      drupal_write_record('stripe_payment', $params);
     }
     catch(\Stripe_Error $e) {
       $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
@@ -107,8 +116,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
   public function createPlan($customer, $payment, $interval) {
     $amount = $this->getTotalAmount($payment);
     $currency = $payment->currency_code;
-    $description = $customer->email . ' donates ' . ($amount/100) . ' ' .
-      $currency . ' ';
+    $description = ($amount/100) . ' ' . $currency . ' / ' . $interval;
 
     $existing_id = db_select('stripe_payment_plans', 'p')
       ->fields('p', array('id'))
@@ -122,11 +130,10 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       return $existing_id;
     } else {
       $params = array(
-        // add a timestamp to the id to it unique for recurring customers.
-        'id'       => $description . date("Y-m-d H:i:s"),
+        'id'       => $description,
         'amount'   => $amount,
         'payment_interval' => $interval,
-        'name'     => $description . 'every ' . $interval . '.',
+        'name'     => 'donates ' . $description,
         'currency' => $currency,
       );
       drupal_write_record('stripe_payment_plans', $params);
