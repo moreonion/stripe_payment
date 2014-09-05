@@ -33,10 +33,10 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       \Stripe::setApiVersion('2014-01-31');
 
       $customer = $this->createCustomer(
+        $payment->method_data['stripe_payment_token'],
         $this->getName($context),
         $context->value('email')
       );
-      $card = $this->createCard($customer, $payment);
 
       $stripe  = NULL;
       $plan_id = NULL;
@@ -77,27 +77,12 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
   }
 
 
-  public function createCustomer($description, $email) {
+  public function createCustomer($token, $description, $email) {
     return \Stripe_Customer::create(array(
+        'token'       => $token,
         'description' => $description,
         'email'       => $email
       ));
-  }
-
-  public function createCard($customer, $payment) {
-    $method_data = &$payment->method_data;
-
-    // a guard to prevent the later ->format() to fail
-    $expiry = $method_data['expiry_date'];
-    if (get_class($expiry) != "DateTime") { $expiry = date_create(); }
-
-    $customer->cards->create(array(
-        "card" => array(
-          'number'    => $method_data['credit_card_number'],
-          'exp_month' => (int) $expiry->format('m'),
-          'exp_year'  => (int) $expiry->format('Y'),
-	  'cvc'       => $method_data['secure_code'],
-        )));
   }
 
   public function getTotalAmount(\Payment $payment) {
