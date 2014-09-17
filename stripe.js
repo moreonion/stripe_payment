@@ -70,10 +70,10 @@ Drupal.behaviors.stripe_payment = {
         Stripe.card.createToken(params, function(status, result) {
             var self = Drupal.behaviors.stripe_payment;
             var ajax, ajax_next, ajax_submit;
-            if (result.error) {
+            if (typeof result.error !== 'undefined') {
                 self.errorHandler(result.error.message);
             } else {
-                $('#' + self.form_id + ' .stripe-payment-token').val(result.token);
+                $('#' + self.form_id + ' .stripe-payment-token').val(result.id);
 		            ajax_next = 'edit-webform-ajax-next-'+self.form_num;
 		            ajax_submit = 'edit-webform-ajax-submit-'+self.form_num;
 

@@ -79,7 +79,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
 
   public function createCustomer($token, $description, $email) {
     return \Stripe_Customer::create(array(
-        'token'       => $token,
+        'card'        => $token,
         'description' => $description,
         'email'       => $email
       ));
