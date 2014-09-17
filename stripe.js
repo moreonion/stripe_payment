@@ -106,7 +106,7 @@ Drupal.behaviors.stripe_payment = {
     validateCreditCard: function(p) {
         var number = Stripe.card.validateCardNumber(p.number),
             expiry = Stripe.card.validateExpiry(p.exp_month, p.exp_year),
-            cvc    = Stripe.card.validateCvc(p.cvc);
+            cvc    = Stripe.card.validateCVC(p.cvc);
         if (!number) { this.errorHandler(Drupal.t('Invalid card number.')); };
         if (!expiry) { this.errorHandler(Drupal.t('Invalid expiry date.')); };
         if (!cvc)    { this.errorHandler(Drupal.t('Invalid CVC.')); };
