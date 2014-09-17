@@ -33,16 +33,9 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
       'setting'
     );
 
-    $form['#attached']['js'] = array(
-      array(
-        'data' => 'https://js.stripe.com/v2/',
-        'type' => 'external'
-      ),
-      array(
-        'data' => drupal_get_path('module', 'stripe_payment') .
-        '/stripe.js',
-        'type' => 'file'
-      )
+    drupal_add_js(
+      drupal_get_path('module', 'stripe_payment') . '/stripe.js',
+      'file'
     );
 
     $form['stripe_payment_token'] = array(

@@ -2,7 +2,19 @@
 Drupal.behaviors.stripe_payment = {
     attach: function(context, settings) {
         var self = this;
-        self.settings = settings.stripe_payment;
+        if (typeof self.settings === 'undefined') {
+            self.settings = settings.stripe_payment;
+            self.context = context;
+        }
+
+        if (typeof Stripe == 'undefined') {
+            $.getScript('https://js.stripe.com/v2/').done(function() {
+                console.log(window.Stripe);
+                self.attach();
+            });
+            return;
+        }
+
         Stripe.setPublishableKey(self.settings.public_key);
 
         $form = $('.webform-client-form #payment-method-all-forms', context)
