@@ -9,7 +9,6 @@ Drupal.behaviors.stripe_payment = {
 
         if (typeof Stripe == 'undefined') {
             $.getScript('https://js.stripe.com/v2/').done(function() {
-                console.log(window.Stripe);
                 self.attach();
             });
             return;
