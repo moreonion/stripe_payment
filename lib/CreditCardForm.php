@@ -25,9 +25,11 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     $payment = &$form_state['payment'];
 
     drupal_add_js(
-      array('stripe_payment' => array(
-        'public_key' => $payment->method->controller_data['public_key'],
-      )),
+      array(
+        'stripe_payment' => array(
+          'public_key' => $payment->method->controller_data['public_key'],
+        ),
+      ),
       'setting'
     );
 
