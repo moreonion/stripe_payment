@@ -51,6 +51,10 @@ Drupal.behaviors.stripe_payment = {
         event.preventDefault();
         event.stopImmediatePropagation();
 
+	if (typeof Drupal.clientsideValidation !== 'undefined') {
+	    $('#clientsidevalidation-' + self.form_id + '-errors ul').empty();
+	}
+
         $('.mo-dialog-wrapper').addClass('visible');
 
         var getField = function(name) {
@@ -93,13 +97,26 @@ Drupal.behaviors.stripe_payment = {
 
     errorHandler: function(error) {
         var self = Drupal.behaviors.stripe_payment;
-        if ($('#messages').length === 0) {
-            $('<div id="messages"><div class="section clearfix">' +
-              '</div></div>').insertAfter('#header');
-        }
-        $('<div class="messages error">' + error + '</div>')
-            .appendTo("#messages .clearfix");
-        console.error(error);
+	var settings, wrapper, child;
+	if (typeof Drupal.clientsideValidation !== 'undefined') {
+	    settings = Drupal.settings.clientsideValidation['forms'][self.form_id];
+	    wrapper = document.createElement(settings.general.wrapper);
+	    child = document.createElement(settings.general.errorElement);
+	    child.className = settings.general.errorClass;
+	    child.innerHTML = error;
+	    wrapper.appendChild(child);
+
+	    $('#clientsidevalidation-' + self.form_id + '-errors ul')
+		.append(wrapper).show()
+		.parent().show();
+	} else {
+            if ($('#messages').length === 0) {
+		$('<div id="messages"><div class="section clearfix">' +
+		  '</div></div>').insertAfter('#header');
+            }
+            $('<div class="messages error">' + error + '</div>')
+		.appendTo("#messages .clearfix");
+	}
     },
 
     validateCreditCard: function(p) {
