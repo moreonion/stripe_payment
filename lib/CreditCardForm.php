@@ -2,6 +2,8 @@
 
 namespace Drupal\stripe_payment;
 
+use \Drupal\payment_forms\PaymentContextInterface;
+
 class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
   static protected $issuers = array(
     'visa'           => 'Visa',
@@ -20,8 +22,8 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     'diners_club'    => 'CSC (Card Security Code)',
   );
 
-  public function getForm(array &$form, array &$form_state) {
-    parent::getForm($form, $form_state);
+  public function getForm(array &$form, array &$form_state, PaymentContextInterface $context) {
+    parent::getForm($form, $form_state, $context);
     $payment = &$form_state['payment'];
 
     drupal_add_js(
