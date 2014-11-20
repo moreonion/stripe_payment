@@ -61,18 +61,18 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
       entity_save('payment', $payment);
 
-      $message = t(
+      $message =
         '@method payment method encountered an error while contacting ' .
         'the stripe server. The status code "@status" and the error ' .
-        'message "@message". (pid: @pid, pmid: @pmid)',
-        array(
-          '@status'   => $e->getHttpStatus(),
-          '@message'  => $e->getMessage(),
-          '@pid'      => $payment->pid,
-          '@pmid'     => $payment->method->pmid,
-          '@method'   => $payment->method->title_specific,
-        ));
-      throw new \PaymentException($message);
+        'message "@message". (pid: @pid, pmid: @pmid)';
+      $variables = array(
+        '@status'   => $e->getHttpStatus(),
+        '@message'  => $e->getMessage(),
+        '@pid'      => $payment->pid,
+        '@pmid'     => $payment->method->pmid,
+        '@method'   => $payment->method->title_specific,
+      );
+      watchdog('stripe_payment', $message, $variables, WATCHDOG_ERROR);
     }
   }
 
