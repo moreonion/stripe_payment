@@ -14,8 +14,6 @@ Drupal.behaviors.stripe_payment = {
             return;
         }
 
-        Stripe.setPublishableKey(self.settings.public_key);
-
         $form = $('.webform-client-form #payment-method-all-forms', context)
             .closest('form.webform-client-form', document);
 
@@ -27,6 +25,7 @@ Drupal.behaviors.stripe_payment = {
               '</div></div>').appendTo('body');
         }
 
+        self.$form = $form;
         self.form_id = $form.attr('id');
         self.form_num = self.form_id.split('-')[3];
         self.$button = $form.find('#edit-webform-ajax-submit-' + self.form_num);
@@ -41,27 +40,25 @@ Drupal.behaviors.stripe_payment = {
     submitHandler: function(event) {
         var params;
         var self = Drupal.behaviors.stripe_payment;
-        var controller = $('#' + self.form_id +
-                           ' .payment-method-form:visible').attr('id');
+        var $form = self.$form;
+        var $method = $form.find('.payment-method-form:visible');
 
-        // Some non-paymill method was selected, do nothing on submit.
-        if (controller !== 'Drupalstripe-paymentCreditCardController') {
+        // Some non-stripe method was selected, do nothing on submit.
+        if (!($method.data('pmid') in self.settings)) {
             return true;
         }
         event.preventDefault();
         event.stopImmediatePropagation();
 
-	if (typeof Drupal.clientsideValidation !== 'undefined') {
-	    $('#clientsidevalidation-' + self.form_id + '-errors ul').empty();
-	}
+        if (typeof Drupal.clientsideValidation !== 'undefined') {
+          $('#clientsidevalidation-' + self.form_id + '-errors ul').empty();
+        }
 
         $('.mo-dialog-wrapper').addClass('visible');
 
         var getField = function(name) {
             if (name instanceof Array) { name = name.join(']['); }
-            return $('[name="submitted[paymethod_select]' +
-                     '[payment_method_all_forms][' + controller + '][' +
-                     name + ']"]');
+            return $method.find('[name$="[' + name + ']"]');
         };
         params = {
             number:     getField('credit_card_number').val(),
@@ -69,26 +66,24 @@ Drupal.behaviors.stripe_payment = {
             exp_year:   getField(['expiry_date', 'year']).val(),
             cvc:        getField('secure_code').val(),
         };
+
+        Stripe.setPublishableKey(self.settings[$method.data('pmid')].public_key);
         if (!self.validateCreditCard(params)) { return; }
 
         Stripe.card.createToken(params, function(status, result) {
             var self = Drupal.behaviors.stripe_payment;
-            var ajax, ajax_next, ajax_submit;
+            var ajax, button_id;
             if (typeof result.error !== 'undefined') {
                 self.errorHandler(result.error.message);
             } else {
-                $('#' + self.form_id + ' .stripe-payment-token').val(result.id);
-		            ajax_next = 'edit-webform-ajax-next-'+self.form_num;
-		            ajax_submit = 'edit-webform-ajax-submit-'+self.form_num;
+                $form.find('.stripe-payment-token').val(result.id);
+                button_id = $(event.target).attr('id');
 
-                if (Drupal.ajax && Drupal.ajax[ajax_submit]) {
-                    ajax = Drupal.ajax[ajax_submit];
-		                ajax.eventResponse(ajax.element, event);
-                } else if (Drupal.ajax && Drupal.ajax[ajax_next]) {
-                    ajax = Drupal.ajax[ajax_next];
+                if (Drupal.ajax && Drupal.ajax[button_id]) {
+                    ajax = Drupal.ajax[button_id];
 		                ajax.eventResponse(ajax.element, event);
                 } else { // no webform_ajax
-		                $('#' + self.form_id).submit()
+		                $form.submit()
 		            }
             }
         });

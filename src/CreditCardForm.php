@@ -24,17 +24,12 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
 
   public function getForm(array &$form, array &$form_state, PaymentContextInterface $context) {
     parent::getForm($form, $form_state, $context);
-    $payment = &$form_state['payment'];
+    $method = &$form_state['payment']->method;
 
-    drupal_add_js(
-      array(
-        'stripe_payment' => array(
-          'public_key' => $payment->method->controller_data['public_key'],
-        ),
-      ),
-      'setting'
+    $settings['stripe_payment'][$method->pmid] = array(
+      'public_key' => $method->controller_data['public_key'],
     );
-
+    drupal_add_js($settings, 'setting');
     drupal_add_js(
       drupal_get_path('module', 'stripe_payment') . '/stripe.js',
       'file'
