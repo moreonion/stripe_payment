@@ -19,7 +19,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
   public function execute(\Payment $payment) {
     libraries_load('stripe-php');
 
-    $context = &$payment->context_data['context'];
+    $context = &$payment->contextObj;
     $api_key = $payment->method->controller_data['private_key'];
 
     switch ($context->value('donation_interval')) {
