@@ -2,8 +2,6 @@
 
 namespace Drupal\stripe_payment;
 
-use \Drupal\payment_forms\PaymentContextInterface;
-
 class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
   static protected $issuers = array(
     'visa'           => 'Visa',
@@ -22,9 +20,9 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     'diners_club'    => 'CSC (Card Security Code)',
   );
 
-  public function getForm(array &$form, array &$form_state, PaymentContextInterface $context) {
-    parent::getForm($form, $form_state, $context);
-    $method = &$form_state['payment']->method;
+  public function getForm(array &$form, array &$form_state, \Payment $payment) {
+    parent::getForm($form, $form_state, $payment);
+    $method = &$payment->method;
 
     $settings['stripe_payment'][$method->pmid] = array(
       'public_key' => $method->controller_data['public_key'],
@@ -43,12 +41,10 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     return $form;
   }
 
-  public function validateForm(array &$element, array &$form_state) {
+  public function validateForm(array &$element, array &$form_state, \Payment $payment) {
     // Stripe takes care of the real validation, client-side.
-    $values = drupal_array_get_nested_value(
-      $form_state['values'], $element['#parents']);
-    $form_state['payment']->method_data['stripe_payment_token'] =
-      $values['stripe_payment_token'];
+    $values = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
+    $payment->method_data['stripe_payment_token'] = $values['stripe_payment_token'];
   }
 
 }
