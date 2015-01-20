@@ -39,7 +39,21 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
       '#attributes' => array('class' => array('stripe-payment-token')),
     );
 
-    return $form;
+    $ed = array(
+      '#type' => 'container',
+      '#attributes' => array('class' => array('stripe-extra-data')),
+    ) + $this->mappedFields($payment);
+
+    // Stripe does only use the name attribute instead of first_name / last_name.
+    if (!isset($ed['name']) && isset($ed['first_name']) && isset($ed['last_name'])) {
+      $ed['name'] = $ed['first_name'];
+      $ed['name']['#value'] .= ' ' . $ed['last_name']['#value'];
+      $ed['name']['#attributes']['data-stripe'] = 'name';
+    }
+    unset($ed['first_name']);
+    unset($ed['last_name']);
+
+    $form['extra_data'] = $ed;
   }
 
   public function validateForm(array &$element, array &$form_state, \Payment $payment) {
@@ -48,4 +62,41 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     $payment->method_data['stripe_payment_token'] = $values['stripe_payment_token'];
   }
 
+  protected function mappedFields(\Payment $payment) {
+    $fields = array();
+    $field_map = $payment->method->controller_data['config']['field_map'];
+    foreach (static::extraDataFields() as $name => $field) {
+      $map = isset($field_map[$name]) ? $field_map[$name] : array();
+      foreach ($map as $key) {
+        if ($value = $payment->contextObj->value($key)) {
+          $field['#value'] = $value;
+          $fields[$name] = $field;
+        }
+      }
+    }
+    return $fields;
+  }
+
+  public static function extraDataFields() {
+    $fields = array();
+    $f = array(
+      'name' => t('Name'),
+      'first_name' => t('First name'),
+      'last_name' => t('Last name'),
+      'address_line1' => t('Address line 1'),
+      'address_line2' => t('Address line 2'),
+      'address_city' => t('City'),
+      'address_state' => t('State'),
+      'address_zip' => t('Postal code'),
+      'address_country' => t('Country'),
+    );
+    foreach ($f as $name => $title) {
+      $fields[$name] = array(
+        '#type' => 'hidden',
+        '#title' => $title,
+        '#attributes' => array('data-stripe' => $name),
+      );
+    }
+    return $fields;
+  }
 }

@@ -37,6 +37,11 @@ Drupal.behaviors.stripe_payment = {
         Stripe.setPublishableKey(this.settings[pmid].public_key);
         if (!this.validateCreditCard(params)) { return false; }
 
+        $method.find('.stripe-extra-data input').each(function() {
+          var $input = $(this);
+          params[$input.data('stripe')] = $input.val();
+        });
+
         var self = this;
         Stripe.card.createToken(params, function(status, result) {
             if (typeof result.error !== 'undefined') {

@@ -6,11 +6,14 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
   public $controller_data_defaults = array(
     'private_key' => '',
     'public_key'  => '',
+    'config' => array(
+      'field_map' => array(),
+    ),
   );
 
   public function __construct() {
     $this->title = t('Stripe Credit Card');
-    $this->form = new \Drupal\stripe_payment\CreditCardForm();
+    $this->form = new CreditCardForm();
 
     $this->payment_configuration_form_elements_callback = 'payment_forms_method_form';
     $this->payment_method_configuration_form_elements_callback = '\Drupal\stripe_payment\configuration_form';
@@ -162,6 +165,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       while ($data = $result->fetchAssoc()) {
         $method = $entities[$data['pmid']];
         unset($data['pmid']);
+        $data['config'] = unserialize($data['config']);
         $method->controller_data = (array) $data;
         $method->controller_data += $method->controller->controller_data_defaults;
       }
@@ -173,10 +177,12 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
    */
   public function insert($method) {
     $method->controller_data += $this->controller_data_defaults;
+    $data = $method->controller_data;
+    $data['pmid'] = $method->pmid;
+    $data['config'] = serialize($data['config']);
 
     $query = db_insert('stripe_payment_payment_method_controller');
-    $values = array_merge($method->controller_data, array('pmid' => $method->pmid));
-    $query->fields($values);
+    $query->fields($data);
     $query->execute();
   }
 
@@ -184,9 +190,10 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
    * Helper for entity_update().
    */
   public function update($method) {
+    $data = $method->controller_data;
+    $data['config'] = serialize($data['config']);
     $query = db_update('stripe_payment_payment_method_controller');
-    $values = array_merge($method->controller_data, array('pmid' => $method->pmid));
-    $query->fields($values);
+    $query->fields($data);
     $query->condition('pmid', $method->pmid);
     $query->execute();
   }
@@ -201,13 +208,12 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
   }
 }
 
-/* Implements PaymentMethodController::payment_method_configuration_form_elements_callback().
- *
- * @return array
- *   A Drupal form.
- */
 function configuration_form(array $form, array &$form_state) {
-  $controller_data = $form_state['payment_method']->controller_data;
+  $cd = drupal_array_merge_deep(array(
+    'private_key' => '',
+    'public_key' => '',
+    'config' => array('field_map' => array()),
+  ), $form_state['payment_method']->controller_data);
 
   $library = libraries_detect('stripe-php');
   if (empty($library['installed'])) {
@@ -219,7 +225,7 @@ function configuration_form(array $form, array &$form_state) {
     '#title' => t('Private key'),
     '#description' => t('Available from Your Account / Settings / API keys on stripe.com'),
     '#required' => true,
-    '#default_value' => isset($controller_data['private_key']) ? $controller_data['private_key'] : '',
+    '#default_value' => $cd['private_key'],
   );
 
   $form['public_key'] = array(
@@ -227,18 +233,32 @@ function configuration_form(array $form, array &$form_state) {
     '#title' => t('Public key'),
     '#description' => t('Available from Your Account / Settings / API keys on stripe.com'),
     '#required' => true,
-    '#default_value' => isset($controller_data['public_key']) ? $controller_data['public_key'] : '',
+    '#default_value' => $cd['public_key'],
   );
+
+  $form['config']['field_map'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Personal data mapping'),
+    '#description' => t('This setting allows you to map data from the payment context to stripe fields. If data is found for one of the mapped fields it will be transferred to stripe. Use a comma to separate multiple field keys.'),
+  );
+
+  $map = $cd['config']['field_map'];
+  foreach (CreditCardForm::extraDataFields() as $name => $field) {
+    $default = implode(', ', isset($map[$name]) ? $map[$name] : array());
+    $form['config']['field_map'][$name] = array(
+      '#type' => 'textfield',
+      '#title' => $field['#title'],
+      '#default_value' => $default,
+    );
+  }
 
   return $form;
 }
 
-/**
- * Implements form validate callback for
- * \stripe_payment\configuration_form().
- */
 function configuration_form_validate(array $element, array &$form_state) {
-  $values = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
-  $form_state['payment_method']->controller_data['private_key'] = $values['private_key'];
-  $form_state['payment_method']->controller_data['public_key'] = $values['public_key'];
+  $cd = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
+  foreach ($cd['config']['field_map'] as $k => &$v) {
+    $v = array_filter(array_map('trim', explode(',', $v)));
+  }
+  $form_state['payment_method']->controller_data = $cd;
 }
