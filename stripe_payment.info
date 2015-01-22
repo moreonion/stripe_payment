@@ -3,6 +3,7 @@ description = Provides payment methods to transfer money using the payment provi
 core = 7.x
 
 dependencies[] = payment
+dependencies[] = payment_context
 dependencies[] = payment_forms
 dependencies[] = xautoload
 dependencies[] = webform_paymethod_select
