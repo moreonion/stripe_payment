@@ -19,6 +19,17 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     $this->payment_method_configuration_form_elements_callback = '\Drupal\stripe_payment\configuration_form';
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  function validate(\Payment $payment, \PaymentMethod $payment_method, $strict) {
+    parent::validate($payment, $payment_method, $strict);
+
+    if (!($library = libraries_detect('stripe-php')) || empty($library['installed'])) {
+      throw new \PaymentValidationException(t('The stripe-php library could not be found.'));
+    }
+  }
+
   public function execute(\Payment $payment) {
     libraries_load('stripe-php');
 
