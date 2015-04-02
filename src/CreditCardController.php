@@ -271,5 +271,32 @@ function configuration_form_validate(array $element, array &$form_state) {
   foreach ($cd['config']['field_map'] as $k => &$v) {
     $v = array_filter(array_map('trim', explode(',', $v)));
   }
+
+  $library = libraries_detect('stripe-php');
+  if (empty($library['installed'])) {
+    drupal_set_message($library['error message'], 'error', FALSE);
+  }
+
+  if (substr($cd['private_key'], 0, 3) != 'sk_') {
+    form_error($element['private_key'], t('Please enter a valid private key (starting with sk_).'));
+  }
+  else {
+    libraries_load('stripe-php');
+    try {
+      \Stripe_Account::retrieve($cd['private_key']);
+    }
+    catch(\Stripe_Error $e) {
+      $values = array(
+        '@status'   => $e->getHttpStatus(),
+        '@message'  => $e->getMessage(),
+      );
+      $msg = t('Unable to contact stripe using this set of keys: HTTP @status: @message.', $values);
+      form_error($element['private_key'], $msg);
+    }
+  }
+  if (substr($cd['public_key'], 0, 3) != 'pk_') {
+    form_error($element['public_key'], t('Please enter a valid public key (starting with pk_).'));
+  }
+
   $form_state['payment_method']->controller_data = $cd;
 }
