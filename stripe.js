@@ -46,6 +46,7 @@ Drupal.behaviors.stripe_payment = {
         Stripe.card.createToken(params, function(status, result) {
             if (typeof result.error !== 'undefined') {
                 self.errorHandler(result.error.message);
+                submitter.error();
             } else {
                 $method.find('.stripe-payment-token').val(result.id);
                 submitter.ready();
