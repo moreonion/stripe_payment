@@ -116,6 +116,18 @@ function stripe_payment_schema() {
 }
 
 /**
+ * Use a machine-name instead of the FQ-class to identify the controller.
+ **/
+function stripe_payment_update_7004() {
+  db_update('payment_method')
+    ->fields(array('controller_class_name' => 'stripe_payment_credit_card'))
+    ->condition(
+      'controller_class_name',
+      '\Drupal\stripe_payment\CreditCardController'
+    )->execute();
+}
+
+/**
  * Add config column to stripe_payment_payment_method_controller.
  */
 function stripe_payment_update_7003() {
