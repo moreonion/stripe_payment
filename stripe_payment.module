@@ -1,5 +1,7 @@
 <?php
 
+use \Drupal\stripe_payment\CreditCardController;
+
 /**
  * Implements hook_payment_method_controller_info().
  */
@@ -19,10 +21,14 @@ function stripe_payment_libraries_info() {
     'name' => 'Stripe',
     'vendor url' => 'https://stripe.com//',
     'download url' => 'https://github.com/stripe/stripe-php',
-    'version' => '1.11.0',
-    'files' => array(
-      'php' => array('lib/Stripe.php')
-    )
+    'version arguments' => array(
+      'file' => 'VERSION',
+      'pattern' => '/([0-9\.]+)/',
+      'lines' => 1
+    ),
+    'xautoload' => function($adapter) {
+       $adapter->composerJson('composer.json');
+    },
   );
   return $libraries;
 }
@@ -32,7 +38,7 @@ function stripe_payment_libraries_info() {
  */
 function stripe_payment_entity_load(array $entities, $entity_type) {
   if ($entity_type == 'payment_method') {
-    \Drupal\Stripe_payment\CreditCardController::load($entities);
+    CreditCardController::load($entities);
   }
 }
 
@@ -40,7 +46,7 @@ function stripe_payment_entity_load(array $entities, $entity_type) {
  * Implements hook_ENTITY_TYPE_ACTION().
  */
 function stripe_payment_payment_method_insert(PaymentMethod $method) {
-  if ($method->controller instanceof \Drupal\Stripe_payment\CreditCardController)
+  if ($method->controller instanceof CreditCardController)
     $method->controller->insert($method);
 }
 
@@ -48,7 +54,7 @@ function stripe_payment_payment_method_insert(PaymentMethod $method) {
  * Implements hook_ENTITY_TYPE_ACTION().
  */
 function stripe_payment_payment_method_update(PaymentMethod $method) {
-  if ($method->controller instanceof \Drupal\Stripe_payment\CreditCardController)
+  if ($method->controller instanceof CreditCardController)
     $method->controller->update($method);
 }
 
@@ -56,6 +62,6 @@ function stripe_payment_payment_method_update(PaymentMethod $method) {
  * Implements hook_ENTITY_TYPE_ACTION().
  */
 function stripe_payment_payment_method_delete($method) {
-  if ($method->controller instanceof \Drupal\Stripe_payment\CreditCardController)
+  if ($method->controller instanceof CreditCardController)
     $method->controller->delete($method);
 }

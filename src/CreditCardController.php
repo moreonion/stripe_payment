@@ -43,8 +43,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     }
 
     try {
-      \Stripe::setApiKey($api_key);
-      \Stripe::setApiVersion('2014-01-31');
+      \Stripe\Stripe::setApiKey($api_key);
 
       $customer = $this->createCustomer(
         $payment->method_data['stripe_payment_token'],
@@ -71,7 +70,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       );
       drupal_write_record('stripe_payment', $params);
     }
-    catch(\Stripe_Error $e) {
+    catch(\Stripe\Error\Base $e) {
       $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
       entity_save('payment', $payment);
 
@@ -92,7 +91,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
 
 
   public function createCustomer($token, $description, $email) {
-    return \Stripe_Customer::create(array(
+    return \Stripe\Customer::create(array(
         'card'        => $token,
         'description' => $description,
         'email'       => $email
@@ -105,7 +104,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
   }
 
   public function createCharge($customer, $payment) {
-    return \Stripe_Charge::create(array(
+    return \Stripe\Charge::create(array(
         'customer' => $customer->id,
         'amount'   => $this->getTotalAmount($payment),
         'currency' => $payment->currency_code
@@ -142,7 +141,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       $params['interval'] = $params['payment_interval'];
       unset($params['payment_interval']);
       unset($params['pid']);
-      return \Stripe_Plan::create($params)->id;
+      return \Stripe\Plan::create($params)->id;
     }
   }
 
@@ -283,9 +282,9 @@ function configuration_form_validate(array $element, array &$form_state) {
   else {
     libraries_load('stripe-php');
     try {
-      \Stripe_Account::retrieve($cd['private_key']);
+      \Stripe\Account::retrieve($cd['private_key']);
     }
-    catch(\Stripe_Error $e) {
+    catch(\Stripe\Error\Base $e) {
       $values = array(
         '@status'   => $e->getHttpStatus(),
         '@message'  => $e->getMessage(),
