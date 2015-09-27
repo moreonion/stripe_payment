@@ -28,6 +28,10 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     if (!($library = libraries_detect('stripe-php')) || empty($library['installed'])) {
       throw new \PaymentValidationException(t('The stripe-php library could not be found.'));
     }
+    if (version_compare($library['version'], '3', '<')) {
+      $msg = 'stripe_payment needs at least version 3 of the stripe-php library (installed: @version).';
+      throw new \PaymentValidationException(t($msg, array('@version' => $library['version'])));
+    }
   }
 
   public function execute(\Payment $payment) {

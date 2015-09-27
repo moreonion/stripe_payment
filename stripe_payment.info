@@ -1,6 +1,7 @@
 name = Stripe Payment methods
 description = Provides payment methods to transfer money using the payment provider www.stripe.com
 core = 7.x
+php = 5.4
 
 dependencies[] = libraries
 dependencies[] = payment (>= 7.x-1.10)
