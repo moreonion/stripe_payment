@@ -12,30 +12,6 @@
  * stores serialized PaymentMethodController objects.
  */
 function stripe_payment_schema() {
-  $schema['stripe_payment_payment_method_controller'] = array(
-    'fields' => array(
-      'public_key' => array(
-        'type' => 'text',
-      ),
-      'private_key' => array(
-        'type'     => 'text',
-      ),
-      'pmid' => array(
-        'type'     => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default'  => 0,
-      ),
-      'config' => array(
-        'type' => 'text',
-      ),
-    ),
-    'primary key' => array('pmid'),
-    'unique keys' => array(
-      'pmid' => array('pmid'),
-    ),
-  );
-
   $schema['stripe_payment_plans'] = array(
     'fields' => array(
       'pid' => array(
@@ -113,6 +89,29 @@ function stripe_payment_schema() {
     ),
   );
   return $schema;
+}
+
+/**
+ * Enable payment_controller_data and migrate configurations.
+ */
+function stripe_payment_update_7005() {
+  if (!module_enable(['payment_controller_data'])) {
+    throw new DrupalUpdateException('Could not enable payment_controller_data.');
+  }
+
+  $result = db_select('stripe_payment_payment_method_controller', 'd')
+    ->fields('d')
+    ->execute();
+  foreach ($result as $row) {
+    $method = entity_load_single('payment_method', $row->pmid);
+    $method->controller_data = [
+      'config' => unserialize($row->config),
+      'private_key' => $row->private_key,
+      'public_key' => $row->public_key,
+    ];
+    entity_save('payment_method', $method);
+  }
+  db_drop_table('stripe_payment_payment_method_controller');
 }
 
 /**
