@@ -7,9 +7,9 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     'private_key' => '',
     'public_key'  => '',
     'config' => array(
+      'enable_recurrent_payments' => 1,
       'field_map' => array(),
     ),
-    'enable_recurrent_payments' => 1,
   );
 
   public function __construct() {
@@ -31,7 +31,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     }
 
     if ($payment->contextObj && ($interval = $payment->contextObj->value('donation_interval'))) {
-      if (empty($method->controller_data['enable_recurrent_payments']) && in_array($interval, ['m', 'y'])) {
+      if (empty($method->controller_data['config']['enable_recurrent_payments']) && in_array($interval, ['m', 'y'])) {
         throw new \PaymentValidationException(t('Recurrent payments are disabled for this payment method.'));
       }
     }
@@ -230,7 +230,7 @@ function configuration_form(array $form, array &$form_state) {
   $cd = drupal_array_merge_deep(array(
     'private_key' => '',
     'public_key' => '',
-    'config' => array('field_map' => array()),
+    'config' => array('field_map' => array(), 'enable_recurrent_payments' => 1),
   ), $form_state['payment_method']->controller_data);
 
   $library = libraries_detect('stripe-php');
@@ -254,11 +254,11 @@ function configuration_form(array $form, array &$form_state) {
     '#default_value' => $cd['public_key'],
   );
 
-  $form['enable_recurrent_payments'] = [
+  $form['config']['enable_recurrent_payments'] = [
     '#type' => 'checkbox',
     '#title' => t('Enable recurrent payments'),
     '#description' => t('Check this if you want to enable stripe payment plans. In addition to enabling this, your payment context needs to support recurrent payments'),
-    '#default_value' => $cd['enable_recurrent_payments'],
+    '#default_value' => $cd['config']['enable_recurrent_payments'],
   ];
 
   $form['config']['field_map'] = array(
