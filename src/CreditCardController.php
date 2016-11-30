@@ -9,6 +9,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     'config' => array(
       'field_map' => array(),
     ),
+    'enable_recurrent_payments' => 1,
   );
 
   public function __construct() {
@@ -22,29 +23,34 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     return new CreditCardForm();
   }
 
-  public function methodForm() {
+  public function configurationForm() {
     return new CreditCardConfigurationForm();
   }
 
   /**
    * {@inheritdoc}
    */
-  function validate(\Payment $payment, \PaymentMethod $payment_method, $strict) {
-    parent::validate($payment, $payment_method, $strict);
+  function validate(\Payment $payment, \PaymentMethod $method, $strict) {
+    parent::validate($payment, $method, $strict);
 
     if (!($library = libraries_detect('stripe-php')) || empty($library['installed'])) {
       throw new \PaymentValidationException(t('The stripe-php library could not be found.'));
     }
     if (version_compare($library['version'], '3', '<')) {
-      $msg = 'stripe_payment needs at least version 3 of the stripe-php library (installed: @version).';
-      throw new \PaymentValidationException(t($msg, array('@version' => $library['version'])));
+      throw new \PaymentValidationException(t('stripe_payment needs at least version 3 of the stripe-php library (installed: @version).', array('@version' => $library['version'])));
+    }
+
+    if ($payment->contextObj && ($interval = $payment->contextObj->value('donation_interval'))) {
+      if (empty($method->controller_data['enable_recurrent_payments']) && in_array($interval, ['m', 'y'])) {
+        throw new \PaymentValidationException(t('Recurrent payments are disabled for this payment method.'));
+      }
     }
   }
 
   public function execute(\Payment $payment) {
     libraries_load('stripe-php');
 
-    $context = &$payment->contextObj;
+    $context = $payment->contextObj;
     $api_key = $payment->method->controller_data['private_key'];
 
     switch ($context->value('donation_interval')) {

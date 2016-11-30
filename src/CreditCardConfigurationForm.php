@@ -28,6 +28,13 @@ class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInt
       '#default_value' => $cd['public_key'],
     );
 
+    $form['enable_recurrent_payments'] = [
+      '#type' => 'checkbox',
+      '#title' => t('Enable recurrent payments'),
+      '#description' => t('Check this if you want to enable stripe payment plans. In addition to enabling this, your payment context needs to support recurrent payments'),
+      '#default_value' => $cd['enable_recurrent_payments'],
+    ];
+
     $form['config']['field_map'] = array(
       '#type' => 'fieldset',
       '#title' => t('Personal data mapping'),
