@@ -9,6 +9,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     'config' => array(
       'field_map' => array(),
     ),
+    'enable_recurrent_payments' => 1,
   );
 
   public function __construct() {
@@ -22,18 +23,24 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
   /**
    * {@inheritdoc}
    */
-  function validate(\Payment $payment, \PaymentMethod $payment_method, $strict) {
-    parent::validate($payment, $payment_method, $strict);
+  function validate(\Payment $payment, \PaymentMethod $method, $strict) {
+    parent::validate($payment, $method, $strict);
 
     if (!($library = libraries_detect('stripe-php')) || empty($library['installed'])) {
       throw new \PaymentValidationException(t('The stripe-php library could not be found.'));
+    }
+
+    if ($payment->contextObj && ($interval = $payment->contextObj->value('donation_interval'))) {
+      if (empty($method->controller_data['enable_recurrent_payments']) && in_array($interval, ['m', 'y'])) {
+        throw new \PaymentValidationException(t('Recurrent payments are disabled for this payment method.'));
+      }
     }
   }
 
   public function execute(\Payment $payment) {
     libraries_load('stripe-php');
 
-    $context = &$payment->contextObj;
+    $context = $payment->contextObj;
     $api_key = $payment->method->controller_data['private_key'];
 
     switch ($context->value('donation_interval')) {
@@ -246,6 +253,13 @@ function configuration_form(array $form, array &$form_state) {
     '#required' => true,
     '#default_value' => $cd['public_key'],
   );
+
+  $form['enable_recurrent_payments'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Enable recurrent payments'),
+    '#description' => t('Check this if you want to enable stripe payment plans. In addition to enabling this, your payment context needs to support recurrent payments'),
+    '#default_value' => $cd['enable_recurrent_payments'],
+  ];
 
   $form['config']['field_map'] = array(
     '#type' => 'fieldset',
