@@ -64,7 +64,7 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
 
   protected function mappedFields(\Payment $payment) {
     $fields = array();
-    $field_map = $payment->method->controller_data['config']['field_map'];
+    $field_map = $payment->method->controller_data['field_map'];
     foreach (static::extraDataFields() as $name => $field) {
       $map = isset($field_map[$name]) ? $field_map[$name] : array();
       foreach ($map as $key) {

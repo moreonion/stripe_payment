@@ -35,16 +35,16 @@ class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInt
       '#default_value' => $cd['enable_recurrent_payments'],
     ];
 
-    $form['config']['field_map'] = array(
+    $form['field_map'] = array(
       '#type' => 'fieldset',
       '#title' => t('Personal data mapping'),
       '#description' => t('This setting allows you to map data from the payment context to stripe fields. If data is found for one of the mapped fields it will be transferred to stripe. Use a comma to separate multiple field keys.'),
     );
 
-    $map = $cd['config']['field_map'];
+    $map = $cd['field_map'];
     foreach (CreditCardForm::extraDataFields() as $name => $field) {
       $default = implode(', ', isset($map[$name]) ? $map[$name] : array());
-      $form['config']['field_map'][$name] = array(
+      $form['field_map'][$name] = array(
         '#type' => 'textfield',
         '#title' => $field['#title'],
         '#default_value' => $default,
@@ -56,7 +56,7 @@ class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInt
 
   public function validate(array $element, array &$form_state, \PaymentMethod $method) {
     $cd = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
-    foreach ($cd['config']['field_map'] as $k => &$v) {
+    foreach ($cd['field_map'] as $k => &$v) {
       $v = array_filter(array_map('trim', explode(',', $v)));
     }
 
