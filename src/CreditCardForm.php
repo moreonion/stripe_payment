@@ -20,8 +20,8 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     'diners_club'    => 'CSC (Card Security Code)',
   );
 
-  public function getForm(array &$form, array &$form_state, \Payment $payment) {
-    parent::getForm($form, $form_state, $payment);
+  public function form(array $form, array &$form_state, \Payment $payment) {
+    $form = parent::form($form, $form_state, $payment);
     $method = &$payment->method;
 
     $settings['stripe_payment'][$method->pmid] = array(
@@ -54,9 +54,10 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     unset($ed['last_name']);
 
     $form['extra_data'] = $ed;
+    return $form;
   }
 
-  public function validateForm(array &$element, array &$form_state, \Payment $payment) {
+  public function validate(array $element, array &$form_state, \Payment $payment) {
     // Stripe takes care of the real validation, client-side.
     $values = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
     $payment->method_data['stripe_payment_token'] = $values['stripe_payment_token'];
