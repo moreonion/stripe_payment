@@ -85,7 +85,23 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       );
       drupal_write_record('stripe_payment', $params);
     }
-    catch(\Stripe\Error\Base $e) {
+    catch (\Stripe\Error\Card $e) {
+      $body = $e->getJsonBody();
+      $err = $body['error'];
+      $message = 'Card declined (@code @type) in @param: @message (pid: @pid, pmid: @pmid).';
+      $variables = [
+        '@code' => $e->getHttpStatus(),
+        '@type' => $err['type'],
+        '@param' => $err['param'],
+        '@message' => $err['message'],
+        '@pid'      => $payment->pid,
+        '@pmid'     => $payment->method->pmid,
+      ];
+      watchdog_exception('stripe_payment', $e, $message, $variables, WATCHDOG_ERROR);
+      $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
+      entity_save('payment', $payment);
+    }
+    catch (\Stripe\Error\Base $e) {
       $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
       entity_save('payment', $payment);
 
@@ -100,7 +116,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
         '@pmid'     => $payment->method->pmid,
         '@method'   => $payment->method->title_specific,
       );
-      watchdog('stripe_payment', $message, $variables, WATCHDOG_ERROR);
+      watchdog_exception('stripe_payment', $e, $message, $variables, WATCHDOG_ERROR);
     }
   }
 
