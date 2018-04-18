@@ -2,20 +2,20 @@
 Drupal.behaviors.stripe_payment = {
     attach: function(context, settings) {
         if ($('.stripe-payment-token', context).length > 0) {
-          this.settings = settings.stripe_payment;
           if (!Drupal.payment_handler) {
             Drupal.payment_handler = {};
           }
           var self = this;
-          for (var pmid in settings.stripe_payment) {
+          for (var key in settings.stripe_payment) {
+            var pmid = settings.stripe_payment[key].pmid;
             Drupal.payment_handler[pmid] = function(pmid, $method, submitter) {
-              self.validateHandler(pmid, $method, submitter);
+              self.validateHandler(settings.stripe_payment['pmid_' + pmid], $method, submitter);
             };
           }
         }
     },
 
-    validateHandler: function(pmid, $method, submitter) {
+    validateHandler: function(settings, $method, submitter) {
         this.form_id = $method.closest('form').attr('id');
 
         $('.mo-dialog-wrapper').addClass('visible');
@@ -34,7 +34,7 @@ Drupal.behaviors.stripe_payment = {
             cvc:        getField('secure_code').val(),
         };
 
-        Stripe.setPublishableKey(this.settings[pmid].public_key);
+        Stripe.setPublishableKey(settings.public_key);
         if (!this.validateCreditCard(params)) {
           submitter.error();
           return false;
