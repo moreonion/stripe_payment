@@ -24,8 +24,9 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     $form = parent::form($form, $form_state, $payment);
     $method = &$payment->method;
 
-    $settings['stripe_payment'][$method->pmid] = array(
+    $settings['stripe_payment']['pmid_' . $method->pmid] = array(
       'public_key' => $method->controller_data['public_key'],
+      'pmid' => $method->pmid,
     );
     drupal_add_js($settings, 'setting');
     drupal_add_js(
