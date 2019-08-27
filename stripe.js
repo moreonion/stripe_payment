@@ -1,15 +1,79 @@
 (function ($) {
 Drupal.behaviors.stripe_payment = {
     attach: function(context, settings) {
-        if ($('.stripe-payment-token', context).length > 0) {
+        if ($('#stripe-id', context).length > 0) {
           if (!Drupal.payment_handler) {
             Drupal.payment_handler = {};
           }
           var self = this;
           for (var key in settings.stripe_payment) {
-            var pmid = settings.stripe_payment[key].pmid;
+            var pmSettings = settings.stripe_payment[key];
+            var pmid = pmSettings.pmid
+
+            var stripe = Stripe(pmSettings.public_key);
+
+            var elements = stripe.elements({locale: document.documentElement.lang});
+            var cardElement = elements.create('card', {
+              value: {postalCode: 'TODO', hidePostalCode: false}
+            });
+            cardElement.mount('#stripe-card-element');  // TODO: why called on prev step???
+
             Drupal.payment_handler[pmid] = function(pmid, $method, submitter) {
-              self.validateHandler(settings.stripe_payment['pmid_' + pmid], $method, submitter);
+              // self.validateHandler(pmSettings, $method, submitter);
+              var data = {
+              // payment_method_data: {
+              //   billing_details:
+              //     "address": {
+              //       "city": null,
+              //       "country": null,
+              //       "line1": null,
+              //       "line2": null,
+              //       "postal_code": null,
+              //       "state": null
+              //     },
+              //     "email": null,
+              //     "name": null,
+              //     "phone": null
+              //   },
+              // }
+              };
+
+              if (pmSettings.intent_type == 'setup_intent') {
+                stripe.handleCardSetup(
+                  pmSettings.client_secret, cardElement, data
+                ).then(function(result) {
+                  console.log(result.setupIntent);
+                  if (result.error) {
+                    console.log(result.error);
+                    self.errorHandler(result.error.message);
+                    submitter.error();
+                  } else {
+                    $('#stripe-id', context).val(result.setupIntent.id);
+                    console.log('Success!!!!');
+                    console.log(result.setupIntent.id);
+                    submitter.ready();
+                  }
+                });
+              }
+              else {
+                stripe.handleCardPayment(
+                  pmSettings.client_secret, cardElement, data
+                ).then(function(result) {
+                  console.log(result.paymentIntent.payment_method);
+                  console.log(result.paymentIntent.payment_method_options);
+                  console.log(result.paymentIntent.payment_method_types);
+                  if (result.error) {
+                    console.log(result.error);
+                    self.errorHandler(result.error.message);
+                    submitter.error();
+                  } else {
+                    $('#stripe-id', context).val(result.paymentIntent.id);
+                    console.log('Success!!!!');
+                    console.log(result.paymentIntent.id);
+                    submitter.ready();
+                  }
+                });
+              }
             };
           }
         }

@@ -24,21 +24,38 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     $form = parent::form($form, $form_state, $payment);
     $method = &$payment->method;
 
+    \Stripe\Stripe::setApiKey($method->controller_data['private_key']);
+    $intent = $method->controller->createIntent($payment);
+
     $settings['stripe_payment']['pmid_' . $method->pmid] = array(
       'public_key' => $method->controller_data['public_key'],
+      'client_secret' => $intent->client_secret,
+      'intent_type' => $intent->object,
       'pmid' => $method->pmid,
     );
+
     drupal_add_js($settings, 'setting');
     drupal_add_js(
       drupal_get_path('module', 'stripe_payment') . '/stripe.js',
       'file'
     );
-    drupal_add_js('https://js.stripe.com/v2/', 'external');
 
-    $form['stripe_payment_token'] = array(
+    // insert stripe id field
+    $form['stripe_id'] = array(
       '#type' => 'hidden',
-      '#attributes' => array('class' => array('stripe-payment-token')),
+      '#attributes' => ['id' => 'stripe-id'],
     );
+    // insert hosted fields
+    $form['stripe_card_element'] = array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'id' => 'stripe-card-element',
+      ),
+    );
+    unset($form['issuer']);
+    unset($form['credit_card_number']);
+    unset($form['secure_code']);
+    unset($form['expiry_date']);
 
     $ed = array(
       '#type' => 'container',
@@ -61,7 +78,7 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
   public function validate(array $element, array &$form_state, \Payment $payment) {
     // Stripe takes care of the real validation, client-side.
     $values = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
-    $payment->method_data['stripe_payment_token'] = $values['stripe_payment_token'];
+    $payment->method_data['stripe_id'] = $values['stripe_id'];
   }
 
   protected function mappedFields(\Payment $payment) {

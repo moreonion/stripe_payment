@@ -60,17 +60,12 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     try {
       \Stripe\Stripe::setApiKey($api_key);
 
-      $customer = $this->createCustomer(
-        $payment->method_data['stripe_payment_token'],
-        $this->getName($context),
-        $context->value('email')
-      );
-
-      $stripe  = NULL;
+      $intent_id = $payment->method_data['stripe_id'];
+      $stripe = $this->retrieveIntent($intent_id);
       $plan_id = NULL;
-      if (!$interval) {
-        $stripe = $this->createCharge($customer, $payment);
-      } else {
+
+      if ($interval) {
+        $customer = $this->createCustomer($stripe, $context);
         $plan_id = $this->createPlan($customer, $payment, $interval);
         $stripe  = $this->createSubscription($customer, $plan_id);
       }
@@ -79,8 +74,8 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       entity_save('payment', $payment);
       $params = array(
         'pid'       => $payment->pid,
-        'stripe_id' => $stripe->id,
-        'type'      => $stripe->object,
+        'stripe_id' => $stripe->id,      // subscription id (sub_) or payment intent id (pi_)
+        'type'      => $stripe->object,  // "subscription" or "payment_intent"
         'plan_id'   => $plan_id,
       );
       drupal_write_record('stripe_payment', $params);
@@ -120,13 +115,13 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     }
   }
 
-
-  public function createCustomer($token, $description, $email) {
-    return \Stripe\Customer::create(array(
-        'card'        => $token,
-        'description' => $description,
-        'email'       => $email
-      ));
+  public function createCustomer($intent, $context) {
+    return \Stripe\Customer::create([
+      'payment_method' => $intent->payment_method,
+      'name' => $this->getName($context),
+      'email' => $context->value('email'),
+      // TODO: 'address' => [],
+    ]);
   }
 
   public function getTotalAmount(\Payment $payment) {
@@ -134,12 +129,26 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     return (int) ($payment->totalAmount(0) * 100);
   }
 
-  public function createCharge($customer, $payment) {
-    return \Stripe\Charge::create(array(
-        'customer' => $customer->id,
+  public function createIntent($payment) {
+    // SetupIntent: save card details for later use in subscription
+    if (in_array($payment->contextObj->value('donation_interval'), ['m', 'y'])) {
+    // TODO: check if any $payment->line_items are recurrent
+      return \Stripe\SetupIntent::create();
+    }
+    // PaymentIntent: make a payment immediately
+    return \Stripe\PaymentIntent::create([
         'amount'   => $this->getTotalAmount($payment),
         'currency' => $payment->currency_code
-      ));
+      ]);
+  }
+
+  public function retrieveIntent($id) {
+    // Get a matching item via the API:
+    // SetupIntent ids start with `seti_`, PaymentIntent ids with `pi_`
+    if (strpos($id, 'seti') === 0) {
+      return \Stripe\SetupIntent::retrieve($id);
+    }
+    return \Stripe\PaymentIntent::retrieve($id);
   }
 
   public function createPlan($customer, $payment, $interval) {
@@ -162,16 +171,19 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
         'id'       => $description,
         'amount'   => $amount,
         'payment_interval' => $interval,
-        'name'     => 'donates ' . $description,
+        'nickname' => 'donates ' . $description,
         'currency' => $currency,
       );
       drupal_write_record('stripe_payment_plans', $params);
+      // TODO: add product (required parameter!)
 
       // This ugly hack is necessary because 'interval' is a reserved keyword
       // in mysql and drupal does not enclose the field names in '"'.
       $params['interval'] = $params['payment_interval'];
       unset($params['payment_interval']);
       unset($params['pid']);
+      // TODO: find out where $params['name'] comes from and eliminate
+      unset($params['name']);
       return \Stripe\Plan::create($params)->id;
     }
   }
