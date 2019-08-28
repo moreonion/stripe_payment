@@ -32,14 +32,3 @@ function stripe_payment_libraries_info() {
   );
   return $libraries;
 }
-
-/*
- * Implements hook_webform_client_form_alter().
- *
- * Attach stripe vendor js to forms.
- */
-function stripe_payment_form_webform_client_form_alter(&$form, &$form_state, $form_id) {
-  // TODO: restrict, e.g. attach js only to forms that have a Stripe payment method or
-  //       at least any payment method (node type is not necessarily called "donation"!)
-  $form['#attached']['js']['https://js.stripe.com/v3/'] = ['type' => 'external'];
-}

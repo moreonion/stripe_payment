@@ -35,21 +35,21 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     );
 
     drupal_add_js($settings, 'setting');
+    drupal_add_js('https://js.stripe.com/v3/', 'external');
     drupal_add_js(
-      drupal_get_path('module', 'stripe_payment') . '/stripe.js',
+      drupal_get_path('module', 'stripe_payment') . '/js/stripe.min.js',
       'file'
     );
 
     // insert stripe id field
     $form['stripe_id'] = array(
       '#type' => 'hidden',
-      '#attributes' => ['id' => 'stripe-id'],
     );
     // insert hosted fields
     $form['stripe_card_element'] = array(
       '#type' => 'container',
       '#attributes' => array(
-        'id' => 'stripe-card-element',
+        'data-stripe-field' => 'card',
       ),
     );
     unset($form['issuer']);
