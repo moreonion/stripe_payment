@@ -37,11 +37,14 @@ class MethodElement {
    * Initialize empty containers with Stripe elements (iframes for form input).
    */
   initElements () {
-    let elements = this.stripe.elements({ locale: document.documentElement.lang })
-    this.cardElement = elements.create('card', {
-      value: { postalCode: 'test', hidePostalCode: false }
+    const elements = this.stripe.elements({ locale: document.documentElement.lang })
+    this.$element.find('[data-stripe]').each((i, field) => {
+      let element = elements.create(field.dataset.stripe)
+      if (field.dataset.stripe === 'cardNumber') {
+        this.cardNumberElement = element
+      }
+      element.mount(field)
     })
-    this.cardElement.mount('[data-stripe-field="card"]')
   }
 
   /**
@@ -86,7 +89,7 @@ class MethodElement {
       intent.handler = this.stripe.handleCardSetup
     }
     intent.handler(
-      this.settings.client_secret, this.cardElement, data
+      this.settings.client_secret, this.cardNumberElement, data
     ).then((result) => {
       if (result.error) {
         console.log(result.error)
