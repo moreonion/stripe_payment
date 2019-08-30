@@ -2,6 +2,19 @@
 
 var $ = jQuery
 
+function deepSet (obj, keys, value) {
+  var key = keys.shift()
+  if (keys.length > 0) {
+    if (typeof obj[key] === 'undefined') {
+      obj[key] = {}
+    }
+    deepSet(obj[key], keys, value)
+  }
+  else {
+    obj[key] = value
+  }
+}
+
 /**
  * Representing a Stripe payment method element
  */
@@ -34,13 +47,59 @@ class MethodElement {
   }
 
   /**
+   * Get values for CSS properties supported by Stripe elements.
+   */
+  getStyles () {
+    const properties = [
+      'color',
+      'font-family',
+      'font-size',
+      'font-smoothing',
+      'font-style',
+      'font-variant',
+      'font-weight',
+      'line-height',
+      'letter-spacing',
+      'text-align',
+      'text-decoration',
+      'text-shadow',
+      'text-transform',
+    ]
+    const $textField = $(`
+      <div class="form-item form-type-stripe-payment-field">
+        <input type="text" class="default" />
+        <input type="text" class="error invalid" />
+      </div>`
+    ).hide().appendTo(this.$element)
+    let options = {}
+    // copy base styles
+    let styles = window.getComputedStyle($textField.find('input.default').get(0))
+    for (let p of properties) {
+      let styleOption = p.replace(/-([a-z])/g, (g) => g[1].toUpperCase())
+      deepSet(options, ['base', styleOption], styles.getPropertyValue(p))
+    }
+    // copy error color
+    styles = window.getComputedStyle($textField.find('input.error').get(0))
+    deepSet(options, ['invalid', 'color'], styles.getPropertyValue('color'))
+    // tidy up
+    $textField.remove()
+    return options
+  }
+
+  /**
    * Initialize empty containers with Stripe elements (iframes for form input).
    */
   initElements () {
     const elements = this.stripe.elements({ locale: document.documentElement.lang })
+    let options = {
+      style: this.getStyles(),
+      classes: { invalid: 'invalid', complete: 'valid', focus: 'focus' }
+    }
     this.$element.find('[data-stripe]').each((i, field) => {
-      let element = elements.create(field.dataset.stripe)
-      if (field.dataset.stripe === 'cardNumber') {
+      let name = field.dataset.stripe
+      options['placeholder'] = name === 'cardExpiry' ? Drupal.t('MM / YY') : ''
+      let element = elements.create(name, options)
+      if (name === 'cardNumber') {
         this.cardNumberElement = element
       }
       element.mount(field)
