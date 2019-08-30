@@ -48,23 +48,23 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
 
     // override payment fields
     $form['credit_card_number'] = [
-      '#type' => 'container',
+      '#type' => 'stripe_payment_field',
+      '#field_name' => 'cardNumber',
       '#attributes' => [
-        'data-stripe' => 'cardNumber',
         'class' => ['cc-number']
       ],
     ] + $form['credit_card_number'];
     $form['secure_code'] = [
-      '#type' => 'container',
+      '#type' => 'stripe_payment_field',
+      '#field_name' => 'cardCvc',
       '#attributes' => [
-        'data-stripe' => 'cardCvc',
         'class' => ['cc-cvv']
       ],
     ] + $form['secure_code'];
     $form['expiry_date'] = [
-      '#type' => 'container',
+      '#type' => 'stripe_payment_field',
+      '#field_name' => 'cardExpiry',
       '#attributes' => [
-        'data-stripe' => 'cardExpiry',
         'class' => ['cc-expiry']
       ],
     ] + $form['expiry_date'];

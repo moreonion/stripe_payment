@@ -3,6 +3,29 @@
 use \Drupal\stripe_payment\CreditCardController;
 
 /**
+ * Implements hook_element_info().
+ */
+function stripe_payment_element_info() {
+  $types['stripe_payment_field'] = [
+    '#theme' => 'stripe_payment_field',
+    '#theme_wrappers' => ['form_element'],
+  ];
+  return $types;
+}
+
+/**
+ * Implemnts hook_theme().
+ */
+function stripe_payment_theme() {
+  $hooks['stripe_payment_field'] = [
+    'render element' => 'element',
+    'template' => 'stripe-payment-field',
+    'file' => 'stripe_payment.theme.inc',
+  ];
+  return $hooks;
+}
+
+/**
  * Implements hook_payment_method_controller_info().
  */
 function stripe_payment_payment_method_controller_info() {
