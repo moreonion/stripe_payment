@@ -119,12 +119,14 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
       'name' => t('Name'),
       'first_name' => t('First name'),
       'last_name' => t('Last name'),
-      'address_line1' => t('Address line 1'),
-      'address_line2' => t('Address line 2'),
-      'address_city' => t('City'),
-      'address_state' => t('State'),
-      'address_zip' => t('Postal code'),
-      'address_country' => t('Country'),
+      'email' => t('Email address'),
+      'phone' => t('Phone number'),
+      'address.line1' => t('Address line 1'),
+      'address.line2' => t('Address line 2'),
+      'address.city' => t('City'),
+      'address.state' => t('State'),
+      'address.postal_code' => t('Postal code'),
+      'address.country' => t('Country'),
     );
     foreach ($f as $name => $title) {
       $fields[$name] = array(

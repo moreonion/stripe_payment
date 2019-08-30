@@ -92,6 +92,31 @@ function stripe_payment_schema() {
 }
 
 /**
+ * Update Stripe extra field names.
+ */
+function stripe_payment_update_7006() {
+  $change_map = [
+    'address_line1' => 'address.line1',
+    'address_line2' => 'address.line2',
+    'address_zip' => 'address.postal_code',
+    'address_city' => 'address.city',
+    'address_state' => 'address.state',
+    'address_country' => 'address.country',
+  ];
+  $methods = entity_load('payment_method', FALSE, [
+    'controller_class_name' => 'stripe_payment_credit_card',
+  ]);
+  foreach ($methods as $method) {
+    $field_map = &$method->controller_data['field_map'];
+    foreach ($change_map as $old => $new) {
+      $field_map[$new] = $field_map[$old];
+      unset($field_map[$old]);
+    }
+    entity_save('payment_method', $method);
+  }
+}
+
+/**
  * Enable payment_controller_data and migrate configurations.
  */
 function stripe_payment_update_7005() {

@@ -95,8 +95,8 @@ class MethodElement {
       style: this.getStyles(),
       classes: { invalid: 'invalid', complete: 'valid', focus: 'focus' }
     }
-    this.$element.find('[data-stripe]').each((i, field) => {
-      let name = field.dataset.stripe
+    this.$element.find('[data-stripe-element]').each((i, field) => {
+      let name = field.dataset.stripeElement
       options['placeholder'] = name === 'cardExpiry' ? Drupal.t('MM / YY') : ''
       let element = elements.create(name, options)
       if (name === 'cardNumber') {
@@ -114,6 +114,18 @@ class MethodElement {
   }
 
   /**
+   * Read values from extra data fields.
+   */
+  extraData () {
+    let data = {}
+    this.$element.find('[data-stripe]').each((i, field) => {
+      let keys = field.dataset.stripe.split('.')
+      deepSet(data, keys, $(field).val())
+    })
+    return data
+  }
+
+  /**
    * Validate the input data.
    * @param {object} submitter - The Drupal form submitter.
    */
@@ -122,22 +134,10 @@ class MethodElement {
     if (typeof Drupal.clientsideValidation !== 'undefined') {
       $('#clientsidevalidation-' + this.form_id + '-errors ul').empty()
     }
-    var data = {
-    // payment_method_data: {
-    //   billing_details:
-    //     "address": {
-    //       "city": null,
-    //       "country": null,
-    //       "line1": null,
-    //       "line2": null,
-    //       "postal_code": null,
-    //       "state": null
-    //     },
-    //     "email": null,
-    //     "name": null,
-    //     "phone": null
-    //   },
-    // }
+    const data = {
+      payment_method_data: {
+        billing_details: this.extraData()
+      },
     }
     let intent = {
       name: 'paymentIntent',
