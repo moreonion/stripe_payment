@@ -92,6 +92,21 @@ function stripe_payment_schema() {
 }
 
 /**
+ * Create webhooks for exising payment methods.
+ */
+function stripe_payment_update_7007() {
+  $methods = entity_load('payment_method', FALSE, [
+    'controller_class_name' => 'stripe_payment_credit_card',
+  ]);
+  foreach ($methods as $method) {
+    if (empty($method->controller_data['webhook_key'])) {
+      stripe_payment_register_webhook($method);
+      entity_save('payment_method', $method);
+    }
+  }
+}
+
+/**
  * Update Stripe extra field names.
  */
 function stripe_payment_update_7006() {

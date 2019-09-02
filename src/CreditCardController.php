@@ -6,6 +6,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
   public $controller_data_defaults = array(
     'private_key' => '',
     'public_key'  => '',
+    'webhook_key' => '',
     'field_map' => [],
     'enable_recurrent_payments' => 1,
   );

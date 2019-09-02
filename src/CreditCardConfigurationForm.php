@@ -15,7 +15,7 @@ class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInt
     $form['private_key'] = array(
       '#type' => 'textfield',
       '#title' => t('Private key'),
-      '#description' => t('Available from Your Account / Settings / API keys on stripe.com'),
+      '#description' => t('Available from Your Account / Developers / API keys'),
       '#required' => true,
       '#default_value' => $cd['private_key'],
     );
@@ -23,7 +23,7 @@ class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInt
     $form['public_key'] = array(
       '#type' => 'textfield',
       '#title' => t('Public key'),
-      '#description' => t('Available from Your Account / Settings / API keys on stripe.com'),
+      '#description' => t('Available from Your Account / Developers / API keys'),
       '#required' => true,
       '#default_value' => $cd['public_key'],
     );
@@ -71,7 +71,8 @@ class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInt
     else {
       libraries_load('stripe-php');
       try {
-        \Stripe\Account::retrieve($cd['private_key']);
+        \Stripe\Stripe::setApiKey($cd['private_key']);
+        \Stripe\Account::retrieve();
       }
       catch(\Stripe\Error\Base $e) {
         $values = array(
@@ -86,7 +87,7 @@ class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInt
       form_error($element['public_key'], t('Please enter a valid public key (starting with pk_).'));
     }
 
-    $method->controller_data = $cd;
+    $method->controller_data = $cd + $method->controller_data;
   }
 
 }
