@@ -57,6 +57,94 @@ function stripe_payment_libraries_info() {
 }
 
 /**
+ * Implements hook_menu().
+ */
+function stripe_payment_menu() {
+  // Webhook handler.
+  $items['stripe-payment/webhooks/pmid/%entity_object'] = [
+    'title' => 'Stripe Webhook',
+    'page callback' => 'stripe_payment_webhook',
+    'page arguments' => [3],
+    'load arguments' => ['payment_method'],
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'little_helpers_deliver_json',
+  ];
+  return $items;
+}
+
+/**
+ * Page callback for Stripe webhook.
+ */
+function stripe_payment_webhook($method) {
+  if ($method->controller->name != 'stripe_payment_credit_card') {
+    $message = "Received Stripe event for wrong payment method \"@method\" (pmid: @pmid).";
+    $variables = ['@method' => $method->controller->name, '@pmid' => $method->pmid];
+    watchdog('stripe_payment', $message, $variables, WATCHDOG_ALERT);
+    return 405;
+  }
+  $endpoint_secret = $method->controller_data['webhook_key'];
+  $payload = @file_get_contents('php://input');
+  $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
+  $event = null;
+
+  try {
+    $event = \Stripe\Webhook::constructEvent(
+        $payload, $sig_header, $endpoint_secret
+    );
+  } catch(\UnexpectedValueException $e) {
+    $message = 'Rejected data for webhook (pmid: @pmid). @description.';
+    $variables = ['@description' => $e->getMessage(), '@pmid' => $method->pmid];
+    watchdog('stripe_payment', $message, $variables, WATCHDOG_ALERT);
+    return MENU_ACCESS_DENIED;
+  } catch(\Stripe\Error\SignatureVerification $e) {
+    $message = 'Rejected signature for webhook (pmid: @pmid). @description.';
+    $variables = ['@description' => $e->getMessage(), '@pmid' => $method->pmid];
+    watchdog('stripe_payment', $message, $variables, WATCHDOG_ALERT);
+    return MENU_ACCESS_DENIED;
+  }
+
+  $event_types = [
+    'succeeded' => ['payment_intent.succeeded', 'setup_intent.secceeded'],
+    'failed' => ['payment_intent.payment_failed', 'setup_intent.setup_failed'],
+  ];
+  if (!in_array($event->type, array_merge($event_types['succeeded'], $event_types['failed']))) {
+    return 'Ignoring unkown event';
+  }
+
+  $intent = $event->data->object;
+  $pid = db_query(
+    'SELECT pid from {stripe_payment} WHERE stripe_id = :id',
+    [':id' => $intent->id]
+  )->fetchField();
+  if (!$pid) {
+    // A payment can already fail on the payment form. Then there’s no record that needs to be updated.
+    return 'Ignoring unkown payment';
+  }
+  $payment = reset(entity_load("payment", [$pid]));
+
+  if (in_array($event->type, $event_types['succeeded'])) {
+    $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_SUCCESS));
+  }
+  elseif (in_array($event->type, $event_types['failed'])) {
+    $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
+    $error = $intent->last_payment_error;
+    $variables = [
+      '@code' => $error->code,
+      '@decline_code' => $error->decline_code,
+      '@param' => $error->param,
+      '@message' => $error->message,
+      '@pid'      => $payment->pid,
+      '@pmid'     => $payment->method->pmid,
+    ];
+    $message = 'Card declined (@code, @decline_code) in @param: @message (pid: @pid, pmid: @pmid).';
+    watchdog('stripe_payment', $message, $variables, WATCHDOG_ALERT, $error->doc_url);
+  }
+  entity_save('payment', $payment);
+  return 'OK';
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function stripe_payment_form_payment_form_payment_method_alter(&$form, $form_state, $form_id) {
