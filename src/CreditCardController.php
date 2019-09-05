@@ -71,7 +71,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
         $stripe  = $this->createSubscription($customer, $plan_id);
       }
 
-      $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_SUCCESS));
+      $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
       entity_save('payment', $payment);
       $params = array(
         'pid'       => $payment->pid,

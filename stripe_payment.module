@@ -3,6 +3,25 @@
 use \Drupal\stripe_payment\CreditCardController;
 
 /**
+ * The credentials have passed verification and were accepted by Stripe,
+ * but we don’t (yet) know if the actual payment went through.
+ */
+define('STRIPE_PAYMENT_STATUS_ACCEPTED', 'stripe_payment_status_accepted');
+
+/**
+ * Implements hook_payment_status_info().
+ */
+function stripe_payment_payment_status_info() {
+  return [
+    new PaymentStatusInfo([
+      'parent' => PAYMENT_STATUS_SUCCESS,
+      'status' => STRIPE_PAYMENT_STATUS_ACCEPTED,
+      'title' => t('Accepted'),
+    ]),
+  ];
+}
+
+/**
  * Implements hook_element_info().
  */
 function stripe_payment_element_info() {
