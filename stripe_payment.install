@@ -107,6 +107,15 @@ function stripe_payment_update_7007() {
 }
 
 /**
+ * Enable payment_recurrence.
+ */
+function stripe_payment_update_7007() {
+  if (!module_enable(['payment_recurrence'], TRUE)) {
+    throw new DrupalUpdateException('Unable to enable payment_recurrence.');
+  }
+}
+
+/**
  * Update Stripe extra field names.
  */
 function stripe_payment_update_7006() {

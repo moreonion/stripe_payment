@@ -47,72 +47,45 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
   }
 
   public function execute(\Payment $payment) {
-    libraries_load('stripe-php');
+    $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
+    entity_save('payment', $payment);
 
     $context = $payment->contextObj;
     $api_key = $payment->method->controller_data['private_key'];
 
-    switch ($context->value('donation_interval')) {
-      case 'm': $interval = 'month'; break;
-      case 'y': $interval = 'year'; break;
-      default:  $interval = NULL; break;
-    }
+    libraries_load('stripe-php');
+    \Stripe\Stripe::setApiKey($api_key);
 
-    try {
-      \Stripe\Stripe::setApiKey($api_key);
+    $intent_id = $payment->method_data['stripe_id'];
+    $stripe = $this->retrieveIntent($intent_id);
+    $plan_id = NULL;
 
-      $intent_id = $payment->method_data['stripe_id'];
-      $stripe = $this->retrieveIntent($intent_id);
-      $plan_id = NULL;
-
-      if ($interval) {
-        $customer = $this->createCustomer($stripe, $context);
-        $plan_id = $this->createPlan($customer, $payment, $interval);
-        $stripe  = $this->createSubscription($customer, $plan_id);
-      }
-
-      $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
-      entity_save('payment', $payment);
+    if ($intent->object == 'payment_intent') {
+      // save payment
       $params = array(
         'pid'       => $payment->pid,
-        'stripe_id' => $stripe->id,      // subscription id (sub_) or payment intent id (pi_)
-        'type'      => $stripe->object,  // "subscription" or "payment_intent"
+        'stripe_id' => $stripe->id,      // payment intent id (pi_)
+        'type'      => $stripe->object,  // "payment_intent"
         'plan_id'   => $plan_id,
       );
       drupal_write_record('stripe_payment', $params);
     }
-    catch (\Stripe\Error\Card $e) {
-      $body = $e->getJsonBody();
-      $err = $body['error'];
-      $message = 'Card declined (@code @type) in @param: @message (pid: @pid, pmid: @pmid).';
-      $variables = [
-        '@code' => $e->getHttpStatus(),
-        '@type' => $err['type'],
-        '@param' => $err['param'],
-        '@message' => $err['message'],
-        '@pid'      => $payment->pid,
-        '@pmid'     => $payment->method->pmid,
-      ];
-      watchdog_exception('stripe_payment', $e, $message, $variables, WATCHDOG_ERROR);
-      $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
-      entity_save('payment', $payment);
-    }
-    catch (\Stripe\Error\Base $e) {
-      $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
-      entity_save('payment', $payment);
 
-      $message =
-        '@method payment method encountered an error while contacting ' .
-        'the stripe server. The status code "@status" and the error ' .
-        'message "@message". (pid: @pid, pmid: @pmid)';
-      $variables = array(
-        '@status'   => $e->getHttpStatus(),
-        '@message'  => $e->getMessage(),
-        '@pid'      => $payment->pid,
-        '@pmid'     => $payment->method->pmid,
-        '@method'   => $payment->method->title_specific,
-      );
-      watchdog_exception('stripe_payment', $e, $message, $variables, WATCHDOG_ERROR);
+    if ($recurring_items = $this->filterRecurringLineItems($payment)) {
+      $customer = $this->createCustomer($stripe, $context);
+      $currency = $payment->currency_code;
+      foreach ($recurring_items as $name => $line_item) {
+        $plan_id = $this->createPlan($customer, $line_item, $currency);
+        $stripe  = $this->createSubscription($customer, $plan_id);
+        // save subscription
+        $params = array(
+          'pid'       => $payment->pid,
+          'stripe_id' => $stripe->id,      // subscription id (sub_)
+          'type'      => $stripe->object,  // "subscription"
+          'plan_id'   => $plan_id,
+        );
+        drupal_write_record('stripe_payment', $params);
+      }
     }
   }
 
@@ -131,16 +104,18 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
   }
 
   public function createIntent($payment) {
-    // SetupIntent: save card details for later use in subscription
-    if (in_array($payment->contextObj->value('donation_interval'), ['m', 'y'])) {
-    // TODO: check if any $payment->line_items are recurrent
-      return \Stripe\SetupIntent::create();
-    }
     // PaymentIntent: make a payment immediately
-    return \Stripe\PaymentIntent::create([
+    if ($this->filterRecurringLineItems($payment, FALSE)) {
+      return \Stripe\PaymentIntent::create([
         'amount'   => $this->getTotalAmount($payment),
         'currency' => $payment->currency_code
       ]);
+    }
+    // SetupIntent: save card details for later use without initial payment
+    if ($this->filterRecurringLineItems($payment, TRUE)) {
+      return \Stripe\SetupIntent::create();
+    }
+    // TODO: What now? Exception for "nothing to pay for"?
   }
 
   public function retrieveIntent($id) {
@@ -152,9 +127,9 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     return \Stripe\PaymentIntent::retrieve($id);
   }
 
-  public function createPlan($customer, $payment, $interval) {
-    $amount = $this->getTotalAmount($payment);
-    $currency = $payment->currency_code;
+  public function createPlan($customer, $line_item, $currency) {
+    $amount = (int) ($line_item->amount * 100);
+    $interval = $line_item->recurrence->interval_unit;
     $description = ($amount/100) . ' ' . $currency . ' / ' . $interval;
 
     $existing_id = db_select('stripe_payment_plans', 'p')
@@ -199,6 +174,19 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       $context->value('first_name') . ' ' .
       $context->value('last_name')
     );
+  }
+
+  private function filterRecurringLineItems($payment, $recurrence = TRUE) {
+    $filtered = [];
+    foreach ($payment->line_items as $name => $line_item) {
+      if ($line_item->quantity == 0) {
+        continue;
+      }
+      if (!empty($line_item->recurrence->interval_unit) == $recurrence) {
+        $filtered[$name] = $line_item;
+      }
+    }
+    return $filtered;
   }
 
 }

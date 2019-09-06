@@ -8,6 +8,7 @@ dependencies[] = payment (>= 7.x-1.10)
 dependencies[] = payment_context
 dependencies[] = payment_controller_data
 dependencies[] = payment_forms (>= 7.x-2.0-beta1)
+dependencies[] = payment_recurrence
 dependencies[] = webform_paymethod_select
 dependencies[] = xautoload (>= 7.x-5.0)
 
