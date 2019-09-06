@@ -24,6 +24,7 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     $form = parent::form($form, $form_state, $payment);
     $method = &$payment->method;
 
+    libraries_load('stripe-php');
     \Stripe\Stripe::setApiKey($method->controller_data['private_key']);
     $intent = $method->controller->createIntent($payment);
 

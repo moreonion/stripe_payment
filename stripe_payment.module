@@ -108,6 +108,7 @@ function stripe_payment_webhook($method) {
   $event = null;
 
   try {
+    libraries_load('stripe-php');
     $event = \Stripe\Webhook::constructEvent(
         $payload, $sig_header, $endpoint_secret
     );
@@ -184,6 +185,7 @@ function stripe_payment_method_configuration_form_submit($element, &$form_state)
  * Register a webhook for a payment method on Stripe.
  */
 function stripe_payment_register_webhook(\PaymentMethod &$method) {
+  libraries_load('stripe-php');
   \Stripe\Stripe::setApiKey($method->controller_data['private_key']);
   $webhook = \Stripe\WebhookEndpoint::create([
     'url' => url('stripe-payment/webhooks/pmid/' . $method->pmid, ['absolute' => TRUE]),
