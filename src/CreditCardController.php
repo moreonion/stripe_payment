@@ -50,51 +50,52 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
     entity_save('payment', $payment);
 
-    $context = $payment->contextObj;
     $api_key = $payment->method->controller_data['private_key'];
+    $intent_id = $payment->method_data['stripe_id'];
 
     libraries_load('stripe-php');
     \Stripe\Stripe::setApiKey($api_key);
+    $intent = $this->retrieveIntent($intent_id);
 
-    $intent_id = $payment->method_data['stripe_id'];
-    $stripe = $this->retrieveIntent($intent_id);
-    $plan_id = NULL;
-
+    // Save one off payment record.
     if ($intent->object == 'payment_intent') {
-      // save payment
-      $params = array(
-        'pid'       => $payment->pid,
-        'stripe_id' => $stripe->id,      // payment intent id (pi_)
-        'type'      => $stripe->object,  // "payment_intent"
-        'plan_id'   => $plan_id,
-      );
-      drupal_write_record('stripe_payment', $params);
+      $this->saveRecord($payment->pid, $intent);
     }
 
+    // Save recurrent payment record.
     if ($recurring_items = $this->filterRecurringLineItems($payment)) {
-      $customer = $this->createCustomer($stripe, $context);
+      $customer = $this->createCustomer($intent, $payment->contextObj);
       $currency = $payment->currency_code;
       foreach ($recurring_items as $name => $line_item) {
-        $plan_id = $this->createPlan($customer, $line_item, $currency);
-        $stripe  = $this->createSubscription($customer, $plan_id);
-        // save subscription
-        $params = array(
-          'pid'       => $payment->pid,
-          'stripe_id' => $stripe->id,      // subscription id (sub_)
-          'type'      => $stripe->object,  // "subscription"
-          'plan_id'   => $plan_id,
-        );
-        drupal_write_record('stripe_payment', $params);
+        // Since we have a payment date per line item and Stripe per subscription
+        // lets create a new subscription (with only 1 plan) for each line item.
+        $subscription = $this->createSubscription($line_item, $customer, $currency);
+        $subscription_item = reset($subscription->items->data);
+        $this->saveRecord($payment->pid, $subscription, $subscription_item->plan->id);
       }
     }
+  }
+
+  public function saveRecord($pid, $stripe, $plan_id = null) {
+    $params = array(
+      'pid'       => $pid,
+      'stripe_id' => $stripe->id,      // subscription id (sub_) or payment intent id (pi_)
+      'type'      => $stripe->object,  // "subscription" or "payment_intent"
+      'plan_id'   => $plan_id,
+    );
+    drupal_write_record('stripe_payment', $params);
   }
 
   public function createCustomer($intent, $context) {
     return \Stripe\Customer::create([
       'payment_method' => $intent->payment_method,
+      'invoice_settings' => [
+        'default_payment_method' => $intent->payment_method,
+      ],
+      // TODO: Use CreditCardForm::mappedFields()
       'name' => $this->getName($context),
       'email' => $context->value('email'),
-      // TODO: 'address' => [],
+      ],
     ]);
   }
 
@@ -127,45 +128,66 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     return \Stripe\PaymentIntent::retrieve($id);
   }
 
-  public function createPlan($customer, $line_item, $currency) {
-    $amount = (int) ($line_item->amount * 100);
-    $interval = $line_item->recurrence->interval_unit;
-    $description = ($amount/100) . ' ' . $currency . ' / ' . $interval;
-
-    $existing_id = db_select('stripe_payment_plans', 'p')
-      ->fields('p', array('id'))
-      ->condition('payment_interval', $interval)
-      ->condition('amount', $amount)
-      ->condition('currency', $currency)
-      ->execute()
-      ->fetchField();
-
-    if ($existing_id) {
-      return $existing_id;
-    } else {
-      $params = array(
-        'id'       => $description,
-        'amount'   => $amount,
-        'payment_interval' => $interval,
-        'nickname' => 'donates ' . $description,
-        'currency' => $currency,
-      );
-      drupal_write_record('stripe_payment_plans', $params);
-      // TODO: add product (required parameter!)
-
-      // This ugly hack is necessary because 'interval' is a reserved keyword
-      // in mysql and drupal does not enclose the field names in '"'.
-      $params['interval'] = $params['payment_interval'];
-      unset($params['payment_interval']);
-      unset($params['pid']);
-      // TODO: find out where $params['name'] comes from and eliminate
-      unset($params['name']);
-      return \Stripe\Plan::create($params)->id;
+  public function createSubscription($line_item, $customer, $currency) {
+    $plan = $this->getPlan($line_item, $currency);
+    $options = [
+      'customer' => $customer->id,
+      'prorate' => FALSE,  // start with the next full billing cycle
+      'items' => [
+        [
+          'plan' => $plan['id'],
+          'quantity' => $line_item->amount * $line_item->quantity,
+        ],
+      ],
+    ];
+    if ($start_date = $this->getStartDate($line_item->recurrence)) {
+      $options['billing_cycle_anchor'] = $start_date->getTimestamp();
     }
+
+    try {
+      // Assuming the plan already exists.
+      $subscription = \Stripe\Subscription::create($options);
+    }
+    catch(\Stripe\Error\InvalidRequest $e) {
+      if ($e->getStripeCode() !== 'resource_already_exists') {
+        throw $e;
+      }
+      try {
+        // Create a new plan assuming the product already exists.
+        \Stripe\Plan::create($plan);
+      }
+      catch(\Stripe\Error\InvalidRequest $e) {
+        if ($e->getStripeCode() !== 'resource_already_exists') {
+          throw $e;
+        }
+        // Create a new plan together with a new product.
+        $plan['product'] = [
+          'id' => $plan['product'],
+          'name' => $line_item->description,
+        ];
+        \Stripe\Plan::create($plan);
+      }
+      $subscription = \Stripe\Subscription::create($options);
+    }
+    return $subscription;
   }
 
-  public function createSubscription($customer, $plan_id) {
-    return $customer->subscriptions->create(array('plan' => $plan_id));
+  public function getPlan($line_item, $currency) {
+    $interval = $line_item->recurrence->interval_unit;
+    $interval_count = $line_item->recurrence->interval_value;
+    $product_id = $line_item->name;
+    $id = "$interval_count-$interval-$line_item->name-$currency";  // e.g. "1-monthly-donation-EUR"
+    $description = "$interval_count $interval $line_item->description in $currency";  // e.g. "1 monthly Donation in EUR"
+
+    return [
+      'id' => $id,
+      'amount' => 100,
+      'currency' => $currency,
+      'interval' => rtrim($interval, 'ly'),
+      'interval_count' => $interval_count,
+      'nickname' => $description,
+      'product' => $product_id,
+    ];
   }
 
   public function getName($context) {
@@ -174,6 +196,26 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       $context->value('first_name') . ' ' .
       $context->value('last_name')
     );
+  }
+
+  public function getStartDate($recurrence) {
+    if (empty($recurrence->start_date) && empty($recurrence->month) && empty($recurrence->day_of_month)) {
+      return null;
+    }
+    // Earliest possible start date.
+    $earliest = $recurrence->start_date ?? new \DateTime('tomorrow', new \DateTimeZone('UTC'));
+    // Date meeting day of month and month requirements.
+    $y = $earliest->format('Y');
+    $m = $recurrence->month ?? $earliest->format('m');
+    $d = $recurrence->day_of_month ?? $earliest->format('d');
+    $date = new \DateTime($y . $m . $d, new \DateTimeZone('UTC'));
+    // Find the first matching date after the earliest.
+    $unit = rtrim($recurrence->interval_unit, 'ly');
+    $count = $recurrence->interval_value ?? 1;
+    while ($date < $earliest) {
+      $date->modify("$count $unit");
+    }
+    return $date;
   }
 
   private function filterRecurringLineItems($payment, $recurrence = TRUE) {

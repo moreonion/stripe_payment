@@ -144,7 +144,7 @@ class MethodElement {
       handler: this.stripe.handleCardPayment
     }
     if (this.settings.intent_type === 'setup_intent') {
-      intent.type = 'setupIntent'
+      intent.name = 'setupIntent'
       intent.handler = this.stripe.handleCardSetup
     }
     intent.handler(
