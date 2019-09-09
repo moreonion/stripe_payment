@@ -34,13 +34,17 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
       'intent_type' => $intent->object,
       'pmid' => $method->pmid,
     );
-
-    drupal_add_js($settings, 'setting');
-    drupal_add_js('https://js.stripe.com/v3/', 'external');
-    drupal_add_js(
-      drupal_get_path('module', 'stripe_payment') . '/js/stripe.min.js',
-      'file'
-    );
+    $form['#attached']['js'][] = [
+      'type' => 'setting',
+      'data' => $settings,
+    ];
+    $form['#attached']['js']['https://js.stripe.com/v3/'] = [
+      'type' => 'external',
+      'group' => JS_LIBRARY,
+    ];
+    $form['#attached']['js'][drupal_get_path('module', 'stripe_payment') . '/js/stripe.min.js'] = [
+      'type' => 'file',
+    ];
 
     // insert stripe id field
     $form['stripe_id'] = array(
