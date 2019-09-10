@@ -1,6 +1,7 @@
 <?php
 
-use \Drupal\stripe_payment\CreditCardController;
+use Drupal\stripe_payment\Api;
+use Drupal\stripe_payment\CreditCardController;
 
 /**
  * The credentials have passed verification and were accepted by Stripe,
@@ -184,19 +185,10 @@ function stripe_payment_method_configuration_form_submit($element, &$form_state)
 /**
  * Register a webhook for a payment method on Stripe.
  */
-function stripe_payment_register_webhook(\PaymentMethod &$method) {
-  libraries_load('stripe-php');
-  \Stripe\Stripe::setApiKey($method->controller_data['private_key']);
-  $webhook = \Stripe\WebhookEndpoint::create([
-    'url' => url('stripe-payment/webhooks/pmid/' . $method->pmid, ['absolute' => TRUE]),
-    'enabled_events' => [
-      'setup_intent.succeeded',
-      'setup_intent.setup_failed',
-      'payment_intent.payment_failed',
-      'payment_intent.succeeded',
-    ],
-    'api_version' => '2019-08-14',  // otherwise the account’s default API version will be used.
-  ]);
+function stripe_payment_register_webhook(\PaymentMethod $method) {
+  $api = Api::init($method);
+  $url = url('stripe-payment/webhooks/pmid/' . $method->pmid, ['absolute' => TRUE]);
+  $webhook = $api->registerWebhook($url);
   $method->controller_data['webhook_key'] = $webhook->secret;
 }
 

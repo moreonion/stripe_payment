@@ -3,13 +3,8 @@
 namespace Drupal\stripe_payment;
 
 use Drupal\webform_paymethod_select\PaymentRecurrentController;
-use Stripe\Customer;
-use Stripe\Error\InvalidRequest;
 use Stripe\PaymentIntent;
-use Stripe\Plan;
 use Stripe\SetupIntent;
-use Stripe\Stripe;
-use Stripe\Subscription;
 
 /**
  * Payment method controller for stripe credit card payments.
@@ -75,12 +70,8 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
     $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
     entity_save('payment', $payment);
 
-    $api_key = $payment->method->controller_data['private_key'];
-    $intent_id = $payment->method_data['stripe_id'];
-
-    libraries_load('stripe-php');
-    Stripe::setApiKey($api_key);
-    $intent = $this->retrieveIntent($intent_id);
+    $api = Api::init($payment->method);
+    $intent = $api->retrieveIntent($payment->method_data['stripe_id']);
 
     // Save one off payment record.
     if ($intent->object == 'payment_intent') {
@@ -89,12 +80,18 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
 
     // Save recurrent payment record.
     if ($recurring_items = $this->filterRecurringLineItems($payment)) {
-      $customer = $this->createCustomer($intent, $payment->contextObj);
+      $customer = $api->createCustomer($intent, [
+        // TODO: Use CreditCardForm::mappedFields()
+        'name' => $this->getName($payment->contextObj),
+        'email' => $payment->contextObj->value('email'),
+      ]);
       $currency = $payment->currency_code;
       foreach ($recurring_items as $name => $line_item) {
         // Since we have a date per line item and Stripe per subscription
         // lets create a new subscription (with only 1 plan) for each line item.
-        $subscription = $this->createSubscription($line_item, $customer, $currency);
+        $plan = $this->getPlan($line_item, $currency);
+        $options = $this->subscriptionOptions($customer, $plan, $line_item);
+        $subscription = $api->createSubscription($options, $plan, $line_item);
         $subscription_item = reset($subscription->items->data);
         $payment->stripe = $this->createRecord($subscription, $subscription_item->plan->id);
       }
@@ -113,21 +110,6 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
       'type'      => $stripe->object,
       'plan_id'   => $plan_id,
     ];
-  }
-
-  /**
-   * Create a new customer using the API.
-   */
-  public function createCustomer($intent, $context) {
-    return Customer::create([
-      'payment_method' => $intent->payment_method,
-      'invoice_settings' => [
-        'default_payment_method' => $intent->payment_method,
-      ],
-      // TODO: Use CreditCardForm::mappedFields()
-      'name' => $this->getName($context),
-      'email' => $context->value('email'),
-    ]);
   }
 
   /**
@@ -159,63 +141,20 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
   }
 
   /**
-   * Get a payment intent by its ID from the API.
+   * Generate subscription options.
    */
-  public function retrieveIntent($id) {
-    // Get a matching item via the API:
-    // SetupIntent ids start with `seti_`, PaymentIntent ids with `pi_`.
-    if (strpos($id, 'seti') === 0) {
-      return SetupIntent::retrieve($id);
-    }
-    return PaymentIntent::retrieve($id);
-  }
-
-  /**
-   * Create a new subscription via the API.
-   */
-  public function createSubscription($line_item, $customer, $currency) {
-    $plan = $this->getPlan($line_item, $currency);
-    $options = [
-      'customer' => $customer->id,
-      // Start with the next full billing cycle.
-      'prorate' => FALSE,
-      'items' => [
-        [
-          'plan' => $plan['id'],
-          'quantity' => $line_item->amount * $line_item->quantity,
-        ],
-      ],
+  protected function subscriptionOptions($customer, $plan, \PaymentLineItem $line_item) {
+    $options['customer'] = $customer->id;
+    // Start with the next full billing cycle.
+    $options['prorate'] = FALSE;
+    $options['items'][] = [
+      'plan' => $plan['id'],
+      'quantity' => $line_item->amount * $line_item->quantity,
     ];
     if ($start_date = $this->getStartDate($line_item->recurrence)) {
       $options['billing_cycle_anchor'] = $start_date->getTimestamp();
     }
-
-    try {
-      // Assuming the plan already exists.
-      $subscription = Subscription::create($options);
-    }
-    catch (InvalidRequest $e) {
-      if ($e->getStripeCode() !== 'resource_already_exists') {
-        throw $e;
-      }
-      try {
-        // Create a new plan assuming the product already exists.
-        Plan::create($plan);
-      }
-      catch (InvalidRequest $e) {
-        if ($e->getStripeCode() !== 'resource_already_exists') {
-          throw $e;
-        }
-        // Create a new plan together with a new product.
-        $plan['product'] = [
-          'id' => $plan['product'],
-          'name' => $line_item->description,
-        ];
-        Plan::create($plan);
-      }
-      $subscription = Subscription::create($options);
-    }
-    return $subscription;
+    return $options;
   }
 
   /**
