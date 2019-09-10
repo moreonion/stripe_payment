@@ -94,7 +94,6 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       // TODO: Use CreditCardForm::mappedFields()
       'name' => $this->getName($context),
       'email' => $context->value('email'),
-      ],
     ]);
   }
 
