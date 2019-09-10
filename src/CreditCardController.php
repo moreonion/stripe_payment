@@ -2,7 +2,20 @@
 
 namespace Drupal\stripe_payment;
 
-class CreditCardController extends \PaymentMethodController implements \Drupal\webform_paymethod_select\PaymentRecurrentController {
+use Drupal\webform_paymethod_select\PaymentRecurrentController;
+use Stripe\Customer;
+use Stripe\Error\InvalidRequest;
+use Stripe\PaymentIntent;
+use Stripe\Plan;
+use Stripe\SetupIntent;
+use Stripe\Stripe;
+use Stripe\Subscription;
+
+/**
+ * Payment method controller for stripe credit card payments.
+ */
+class CreditCardController extends \PaymentMethodController implements PaymentRecurrentController {
+
   public $controller_data_defaults = array(
     'private_key' => '',
     'public_key'  => '',
@@ -11,6 +24,9 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     'enable_recurrent_payments' => 1,
   );
 
+  /**
+   * Create a new controller instance.
+   */
   public function __construct() {
     $this->title = t('Stripe Credit Card');
 
@@ -18,18 +34,24 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     $this->payment_method_configuration_form_elements_callback = 'payment_forms_method_configuration_form';
   }
 
+  /**
+   * Get a payment form.
+   */
   public function paymentForm() {
     return new CreditCardForm();
   }
 
+  /**
+   * Get a form for configuring the payment method.
+   */
   public function configurationForm() {
     return new CreditCardConfigurationForm();
   }
 
   /**
-   * {@inheritdoc}
+   * Check whether this payment method is available for a payment.
    */
-  function validate(\Payment $payment, \PaymentMethod $method, $strict) {
+  public function validate(\Payment $payment, \PaymentMethod $method, $strict) {
     parent::validate($payment, $method, $strict);
 
     if (!($library = libraries_detect('stripe-php')) || empty($library['installed'])) {
@@ -46,6 +68,9 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     }
   }
 
+  /**
+   * Execute the payment transaction.
+   */
   public function execute(\Payment $payment) {
     $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
     entity_save('payment', $payment);
@@ -54,12 +79,12 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     $intent_id = $payment->method_data['stripe_id'];
 
     libraries_load('stripe-php');
-    \Stripe\Stripe::setApiKey($api_key);
+    Stripe::setApiKey($api_key);
     $intent = $this->retrieveIntent($intent_id);
 
     // Save one off payment record.
     if ($intent->object == 'payment_intent') {
-      $payment->stripe = $this->createRecord($payment->pid, $intent);
+      $payment->stripe = $this->createRecord($intent);
     }
 
     // Save recurrent payment record.
@@ -67,26 +92,34 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
       $customer = $this->createCustomer($intent, $payment->contextObj);
       $currency = $payment->currency_code;
       foreach ($recurring_items as $name => $line_item) {
-        // Since we have a payment date per line item and Stripe per subscription
+        // Since we have a date per line item and Stripe per subscription
         // lets create a new subscription (with only 1 plan) for each line item.
         $subscription = $this->createSubscription($line_item, $customer, $currency);
         $subscription_item = reset($subscription->items->data);
-        $payment->stripe = $this->createRecord($payment->pid, $subscription, $subscription_item->plan->id);
+        $payment->stripe = $this->createRecord($subscription, $subscription_item->plan->id);
       }
     }
     entity_save('payment', $payment);
   }
 
-  public function createRecord($pid, $stripe, $plan_id = null) {
+  /**
+   * Create a record for the {stripe_payment} table.
+   */
+  protected function createRecord($stripe, $plan_id = NULL) {
     return [
-      'stripe_id' => $stripe->id,      // subscription id (sub_) or payment intent id (pi_)
-      'type'      => $stripe->object,  // "subscription" or "payment_intent"
+      // Subscription id (sub_) or payment intent id (pi_).
+      'stripe_id' => $stripe->id,
+      // "subscription" or "payment_intent".
+      'type'      => $stripe->object,
       'plan_id'   => $plan_id,
     ];
   }
 
+  /**
+   * Create a new customer using the API.
+   */
   public function createCustomer($intent, $context) {
-    return \Stripe\Customer::create([
+    return Customer::create([
       'payment_method' => $intent->payment_method,
       'invoice_settings' => [
         'default_payment_method' => $intent->payment_method,
@@ -97,40 +130,55 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     ]);
   }
 
+  /**
+   * Calculate the total amount.
+   *
+   * @return int
+   *   Total amount converted to cents.
+   */
   public function getTotalAmount(\Payment $payment) {
-    // convert amount to cents. Integer value.
     return (int) ($payment->totalAmount(0) * 100);
   }
 
+  /**
+   * Create a new payment intent using the API.
+   */
   public function createIntent($payment) {
-    // PaymentIntent: make a payment immediately
+    // PaymentIntent: Make a payment immediately.
     if ($this->filterRecurringLineItems($payment, FALSE)) {
-      return \Stripe\PaymentIntent::create([
+      return PaymentIntent::create([
         'amount'   => $this->getTotalAmount($payment),
-        'currency' => $payment->currency_code
+        'currency' => $payment->currency_code,
       ]);
     }
-    // SetupIntent: save card details for later use without initial payment
+    // SetupIntent: Save card details for later use without initial payment.
     if ($this->filterRecurringLineItems($payment, TRUE)) {
-      return \Stripe\SetupIntent::create();
+      return SetupIntent::create();
     }
     // TODO: What now? Exception for "nothing to pay for"?
   }
 
+  /**
+   * Get a payment intent by its ID from the API.
+   */
   public function retrieveIntent($id) {
     // Get a matching item via the API:
-    // SetupIntent ids start with `seti_`, PaymentIntent ids with `pi_`
+    // SetupIntent ids start with `seti_`, PaymentIntent ids with `pi_`.
     if (strpos($id, 'seti') === 0) {
-      return \Stripe\SetupIntent::retrieve($id);
+      return SetupIntent::retrieve($id);
     }
-    return \Stripe\PaymentIntent::retrieve($id);
+    return PaymentIntent::retrieve($id);
   }
 
+  /**
+   * Create a new subscription via the API.
+   */
   public function createSubscription($line_item, $customer, $currency) {
     $plan = $this->getPlan($line_item, $currency);
     $options = [
       'customer' => $customer->id,
-      'prorate' => FALSE,  // start with the next full billing cycle
+      // Start with the next full billing cycle.
+      'prorate' => FALSE,
       'items' => [
         [
           'plan' => $plan['id'],
@@ -144,17 +192,17 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
 
     try {
       // Assuming the plan already exists.
-      $subscription = \Stripe\Subscription::create($options);
+      $subscription = Subscription::create($options);
     }
-    catch(\Stripe\Error\InvalidRequest $e) {
+    catch (InvalidRequest $e) {
       if ($e->getStripeCode() !== 'resource_already_exists') {
         throw $e;
       }
       try {
         // Create a new plan assuming the product already exists.
-        \Stripe\Plan::create($plan);
+        Plan::create($plan);
       }
-      catch(\Stripe\Error\InvalidRequest $e) {
+      catch (InvalidRequest $e) {
         if ($e->getStripeCode() !== 'resource_already_exists') {
           throw $e;
         }
@@ -163,19 +211,24 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
           'id' => $plan['product'],
           'name' => $line_item->description,
         ];
-        \Stripe\Plan::create($plan);
+        Plan::create($plan);
       }
-      $subscription = \Stripe\Subscription::create($options);
+      $subscription = Subscription::create($options);
     }
     return $subscription;
   }
 
+  /**
+   * Generate data for a payment plan.
+   */
   public function getPlan($line_item, $currency) {
     $interval = $line_item->recurrence->interval_unit;
     $interval_count = $line_item->recurrence->interval_value;
     $product_id = $line_item->name;
-    $id = "$interval_count-$interval-$line_item->name-$currency";  // e.g. "1-monthly-donation-EUR"
-    $description = "$interval_count $interval $line_item->description in $currency";  // e.g. "1 monthly Donation in EUR"
+    // IDs look like "1-monthly-donation-EUR".
+    $id = "$interval_count-$interval-$line_item->name-$currency";
+    // Descriptions look like "1 monthly Donation in EUR".
+    $description = "$interval_count $interval $line_item->description in $currency";
 
     return [
       'id' => $id,
@@ -188,6 +241,9 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     ];
   }
 
+  /**
+   * Generat the customer name.
+   */
   public function getName($context) {
     return trim(
       $context->value('title') . ' ' .
@@ -196,9 +252,12 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     );
   }
 
+  /**
+   * Calculate the start date for a recurring payment.
+   */
   public function getStartDate($recurrence) {
     if (empty($recurrence->start_date) && empty($recurrence->month) && empty($recurrence->day_of_month)) {
-      return null;
+      return NULL;
     }
     // Earliest possible start date.
     $earliest = $recurrence->start_date ?? new \DateTime('tomorrow', new \DateTimeZone('UTC'));
@@ -216,6 +275,9 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
     return $date;
   }
 
+  /**
+   * Get only recurring or non-recurring line items.
+   */
   private function filterRecurringLineItems($payment, $recurrence = TRUE) {
     $filtered = [];
     foreach ($payment->line_items as $name => $line_item) {
