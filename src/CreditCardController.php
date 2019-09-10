@@ -59,7 +59,7 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
 
     // Save one off payment record.
     if ($intent->object == 'payment_intent') {
-      $this->saveRecord($payment->pid, $intent);
+      $payment->stripe = $this->createRecord($payment->pid, $intent);
     }
 
     // Save recurrent payment record.
@@ -71,19 +71,18 @@ class CreditCardController extends \PaymentMethodController implements \Drupal\w
         // lets create a new subscription (with only 1 plan) for each line item.
         $subscription = $this->createSubscription($line_item, $customer, $currency);
         $subscription_item = reset($subscription->items->data);
-        $this->saveRecord($payment->pid, $subscription, $subscription_item->plan->id);
+        $payment->stripe = $this->createRecord($payment->pid, $subscription, $subscription_item->plan->id);
       }
     }
+    entity_save('payment', $payment);
   }
 
-  public function saveRecord($pid, $stripe, $plan_id = null) {
-    $params = array(
-      'pid'       => $pid,
+  public function createRecord($pid, $stripe, $plan_id = null) {
+    return [
       'stripe_id' => $stripe->id,      // subscription id (sub_) or payment intent id (pi_)
       'type'      => $stripe->object,  // "subscription" or "payment_intent"
       'plan_id'   => $plan_id,
-    );
-    drupal_write_record('stripe_payment', $params);
+    ];
   }
 
   public function createCustomer($intent, $context) {

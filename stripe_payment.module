@@ -199,3 +199,64 @@ function stripe_payment_register_webhook(\PaymentMethod &$method) {
   ]);
   $method->controller_data['webhook_key'] = $webhook->secret;
 }
+
+/**
+ * Implements hook_entity_load().
+ */
+function stripe_payment_entity_load(array $entities, $entity_type) {
+  if ($entity_type == 'payment') {
+    $query = db_select('stripe_payment', 't')
+      ->fields('t')
+      ->condition('pid', array_keys($entities));
+    $result = $query->execute();
+    while ($data = $result->fetchAssoc()) {
+      $payment = $entities[$data['pid']];
+      $payment->stripe = [
+        'stripe_id' => $data['stripe_id'],
+        'type' => $data['type'],
+        'plan_id' => $data['plan_id'],
+      ];
+    }
+  }
+}
+
+/**
+ * Implements hook_payment_insert().
+ */
+function stripe_payment_payment_insert(Payment $payment) {
+  if ($payment->method->controller instanceof CreditCardController) {
+    $data = !empty($payment->stripe) ? $payment->stripe : [];
+    $data += [
+      'stripe_id' => '',
+      'type' => '',
+      'plan_id' => '',
+    ];
+    $data['pid'] = $payment->pid;
+    db_insert('stripe_payment')->fields($data)->execute();
+  }
+}
+
+/**
+ * Implements hook_payment_update().
+ */
+function stripe_payment_payment_update(Payment $payment) {
+  if ($payment->method->controller instanceof CreditCardController) {
+    $data = !empty($payment->stripe) ? $payment->stripe : [];
+    $data += [
+      'stripe_id' => '',
+      'type' => '',
+      'plan_id' => '',
+    ];
+    db_update('stripe_payment')
+      ->fields($data)
+      ->condition('pid', $payment->pid)
+      ->execute();
+  }
+}
+
+/**
+ * Implements hook_payment_delete().
+ */
+function stripe_payment_payment_delete(Payment $payment) {
+  db_delete('stripe_payment')->condition('pid', $payment->pid)->execute();
+}
