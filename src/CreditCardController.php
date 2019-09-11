@@ -3,8 +3,6 @@
 namespace Drupal\stripe_payment;
 
 use Drupal\webform_paymethod_select\PaymentRecurrentController;
-use Stripe\PaymentIntent;
-use Stripe\SetupIntent;
 
 /**
  * Payment method controller for stripe credit card payments.
@@ -79,14 +77,15 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
     }
 
     // Save recurrent payment record.
-    if ($recurring_items = $this->filterRecurringLineItems($payment)) {
+    list($one_off, $recurring) = $this->splitRecurring($payment);
+    if ($recurring->line_items) {
       $customer = $api->createCustomer($intent, [
         // TODO: Use CreditCardForm::mappedFields()
         'name' => $this->getName($payment->contextObj),
         'email' => $payment->contextObj->value('email'),
       ]);
       $currency = $payment->currency_code;
-      foreach ($recurring_items as $name => $line_item) {
+      foreach ($recurring->line_items as $name => $line_item) {
         // Since we have a date per line item and Stripe per subscription
         // lets create a new subscription (with only 1 plan) for each line item.
         $plan = $this->getPlan($line_item, $currency);
@@ -113,34 +112,6 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
   }
 
   /**
-   * Calculate the total amount.
-   *
-   * @return int
-   *   Total amount converted to cents.
-   */
-  public function getTotalAmount(\Payment $payment) {
-    return (int) ($payment->totalAmount(0) * 100);
-  }
-
-  /**
-   * Create a new payment intent using the API.
-   */
-  public function createIntent($payment) {
-    // PaymentIntent: Make a payment immediately.
-    if ($this->filterRecurringLineItems($payment, FALSE)) {
-      return PaymentIntent::create([
-        'amount'   => $this->getTotalAmount($payment),
-        'currency' => $payment->currency_code,
-      ]);
-    }
-    // SetupIntent: Save card details for later use without initial payment.
-    if ($this->filterRecurringLineItems($payment, TRUE)) {
-      return SetupIntent::create();
-    }
-    // TODO: What now? Exception for "nothing to pay for"?
-  }
-
-  /**
    * Generate subscription options.
    */
   protected function subscriptionOptions($customer, $plan, \PaymentLineItem $line_item) {
@@ -149,7 +120,7 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
     $options['prorate'] = FALSE;
     $options['items'][] = [
       'plan' => $plan['id'],
-      'quantity' => $line_item->amount * $line_item->quantity,
+      'quantity' => $line_item->totalAmount(TRUE),
     ];
     if ($start_date = $this->getStartDate($line_item->recurrence)) {
       $options['billing_cycle_anchor'] = $start_date->getTimestamp();
@@ -212,22 +183,6 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
       $date->modify("$count $unit");
     }
     return $date;
-  }
-
-  /**
-   * Get only recurring or non-recurring line items.
-   */
-  private function filterRecurringLineItems($payment, $recurrence = TRUE) {
-    $filtered = [];
-    foreach ($payment->line_items as $name => $line_item) {
-      if ($line_item->quantity == 0) {
-        continue;
-      }
-      if (!empty($line_item->recurrence->interval_unit) == $recurrence) {
-        $filtered[$name] = $line_item;
-      }
-    }
-    return $filtered;
   }
 
 }

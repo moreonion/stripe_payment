@@ -26,6 +26,22 @@ class Api {
   }
 
   /**
+   * Create a new payment intent using the API.
+   */
+  public function createIntent($payment) {
+    list($one_off, $recurring) = Utils::splitRecurring($payment);
+    // PaymentIntent: Make a payment immediately.
+    if ($one_off->line_items) {
+      return PaymentIntent::create([
+        'amount'   => $one_off->getTotalAmount(TRUE),
+        'currency' => $payment->currency_code,
+      ]);
+    }
+    // SetupIntent: Save card details for later use without initial payment.
+    return SetupIntent::create();
+  }
+
+  /**
    * Get a payment intent by its ID from the API.
    *
    * @param string $id
