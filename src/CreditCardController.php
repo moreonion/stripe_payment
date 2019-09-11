@@ -165,9 +165,9 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
     $interval_count = $line_item->recurrence->interval_value;
     $product_id = $line_item->name;
     // IDs look like "1-monthly-donation-EUR".
-    $id = "$interval_count-$interval-$line_item->name-$currency";
+    $id = "$interval_count-$interval-{$line_item->name}-$currency";
     // Descriptions look like "1 monthly Donation in EUR".
-    $description = "$interval_count $interval $line_item->description in $currency";
+    $description = "$interval_count $interval {$line_item->description} in $currency";
 
     return [
       'id' => $id,
