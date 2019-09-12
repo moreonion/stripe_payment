@@ -94,7 +94,7 @@ function stripe_payment_schema() {
 /**
  * Create webhooks for exising payment methods.
  */
-function stripe_payment_update_7007() {
+function stripe_payment_update_7008() {
   $methods = entity_load('payment_method', FALSE, [
     'controller_class_name' => 'stripe_payment_credit_card',
   ]);
