@@ -3,7 +3,7 @@
 namespace Drupal\stripe_payment;
 
 use Stripe\Customer;
-use Stripe\Error\InvalidRequest;
+use Stripe\Exception\InvalidRequestException;
 use Stripe\PaymentIntent;
 use Stripe\Plan;
 use Stripe\SetupIntent;
@@ -79,7 +79,7 @@ class Api {
       // Assuming the plan already exists.
       $subscription = Subscription::create(['customer' => $options['customer']] + $options['subscription']);
     }
-    catch (InvalidRequest $e) {
+    catch (InvalidRequestException $e) {
       if ($e->getStripeCode() !== 'resource_missing') {
         throw $e;
       }
@@ -87,7 +87,7 @@ class Api {
         // Create a new plan assuming the product already exists.
         Plan::create($options['plan']);
       }
-      catch (InvalidRequest $e) {
+      catch (InvalidRequestException $e) {
         if ($e->getStripeCode() !== 'resource_missing') {
           throw $e;
         }

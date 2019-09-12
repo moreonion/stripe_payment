@@ -62,7 +62,7 @@ class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInt
         \Stripe\Stripe::setApiKey($cd['private_key']);
         \Stripe\Account::retrieve();
       }
-      catch(\Stripe\Error\Base $e) {
+      catch(\Stripe\Exception\ApiErrorException $e) {
         $values = array(
           '@status'   => $e->getHttpStatus(),
           '@message'  => $e->getMessage(),

@@ -118,7 +118,7 @@ function stripe_payment_webhook($method) {
     $variables = ['@description' => $e->getMessage(), '@pmid' => $method->pmid];
     watchdog('stripe_payment', $message, $variables, WATCHDOG_ALERT);
     return MENU_ACCESS_DENIED;
-  } catch(\Stripe\Error\SignatureVerification $e) {
+  } catch(\Stripe\Exception\SignatureVerificationException $e) {
     $message = 'Rejected signature for webhook (pmid: @pmid). @description.';
     $variables = ['@description' => $e->getMessage(), '@pmid' => $method->pmid];
     watchdog('stripe_payment', $message, $variables, WATCHDOG_ALERT);
