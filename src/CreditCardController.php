@@ -77,20 +77,15 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
     }
 
     // Save recurrent payment record.
-    list($one_off, $recurring) = $this->splitRecurring($payment);
+    list($one_off, $recurring) = Utils::splitRecurring($payment);
     if ($recurring->line_items) {
       $customer = $api->createCustomer($intent, [
         // TODO: Use CreditCardForm::mappedFields()
-        'name' => $this->getName($payment->contextObj),
+        'name' => Utils::getName($payment),
         'email' => $payment->contextObj->value('email'),
       ]);
-      $currency = $payment->currency_code;
-      foreach ($recurring->line_items as $name => $line_item) {
-        // Since we have a date per line item and Stripe per subscription
-        // lets create a new subscription (with only 1 plan) for each line item.
-        $plan = $this->getPlan($line_item, $currency);
-        $options = $this->subscriptionOptions($customer, $plan, $line_item);
-        $subscription = $api->createSubscription($options, $plan, $line_item);
+      foreach (Utils::generateSubscriptions($recurring) as $subscription_options) {
+        $subscription = $api->createSubscription(['customer' => $customer->id] + $subscription_options);
         $subscription_item = reset($subscription->items->data);
         $payment->stripe = $this->createRecord($subscription, $subscription_item->plan->id);
       }
@@ -109,80 +104,6 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
       'type'      => $stripe->object,
       'plan_id'   => $plan_id,
     ];
-  }
-
-  /**
-   * Generate subscription options.
-   */
-  protected function subscriptionOptions($customer, $plan, \PaymentLineItem $line_item) {
-    $options['customer'] = $customer->id;
-    // Start with the next full billing cycle.
-    $options['prorate'] = FALSE;
-    $options['items'][] = [
-      'plan' => $plan['id'],
-      'quantity' => $line_item->totalAmount(TRUE),
-    ];
-    if ($start_date = $this->getStartDate($line_item->recurrence)) {
-      $options['billing_cycle_anchor'] = $start_date->getTimestamp();
-    }
-    return $options;
-  }
-
-  /**
-   * Generate data for a payment plan.
-   */
-  public function getPlan($line_item, $currency) {
-    $interval = $line_item->recurrence->interval_unit;
-    $interval_count = $line_item->recurrence->interval_value;
-    $product_id = $line_item->name;
-    // IDs look like "1-monthly-donation-EUR".
-    $id = "$interval_count-$interval-{$line_item->name}-$currency";
-    // Descriptions look like "1 monthly Donation in EUR".
-    $description = "$interval_count $interval {$line_item->description} in $currency";
-
-    return [
-      'id' => $id,
-      'amount' => 100,
-      'currency' => $currency,
-      'interval' => rtrim($interval, 'ly'),
-      'interval_count' => $interval_count,
-      'nickname' => $description,
-      'product' => $product_id,
-    ];
-  }
-
-  /**
-   * Generat the customer name.
-   */
-  public function getName($context) {
-    return trim(
-      $context->value('title') . ' ' .
-      $context->value('first_name') . ' ' .
-      $context->value('last_name')
-    );
-  }
-
-  /**
-   * Calculate the start date for a recurring payment.
-   */
-  public function getStartDate($recurrence) {
-    if (empty($recurrence->start_date) && empty($recurrence->month) && empty($recurrence->day_of_month)) {
-      return NULL;
-    }
-    // Earliest possible start date.
-    $earliest = $recurrence->start_date ?? new \DateTime('tomorrow', new \DateTimeZone('UTC'));
-    // Date meeting day of month and month requirements.
-    $y = $earliest->format('Y');
-    $m = $recurrence->month ?? $earliest->format('m');
-    $d = $recurrence->day_of_month ?? $earliest->format('d');
-    $date = new \DateTime($y . $m . $d, new \DateTimeZone('UTC'));
-    // Find the first matching date after the earliest.
-    $unit = rtrim($recurrence->interval_unit, 'ly');
-    $count = $recurrence->interval_value ?? 1;
-    while ($date < $earliest) {
-      $date->modify("$count $unit");
-    }
-    return $date;
   }
 
 }

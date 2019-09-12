@@ -74,10 +74,10 @@ class Api {
   /**
    * Create a new subscription based on a plan and create the product if needed.
    */
-  public function createSubscription(array $options, array $plan, \PaymentLineItem $line_item) {
+  public function createSubscription(array $options) {
     try {
       // Assuming the plan already exists.
-      $subscription = Subscription::create($options);
+      $subscription = Subscription::create(['customer' => $options['customer']] + $options['subscription']);
     }
     catch (InvalidRequest $e) {
       if ($e->getStripeCode() !== 'resource_already_exists') {
@@ -85,17 +85,14 @@ class Api {
       }
       try {
         // Create a new plan assuming the product already exists.
-        Plan::create($plan);
+        Plan::create($options['plan']);
       }
       catch (InvalidRequest $e) {
         if ($e->getStripeCode() !== 'resource_already_exists') {
           throw $e;
         }
         // Create a new plan together with a new product.
-        $plan['product'] = [
-          'id' => $plan['product'],
-          'name' => $line_item->description,
-        ];
+        $plan['product'] = $options['product'];
         Plan::create($plan);
       }
       $subscription = Subscription::create($options);
@@ -115,7 +112,8 @@ class Api {
         'payment_intent.payment_failed',
         'payment_intent.succeeded',
       ],
-      'api_version' => '2019-08-14',  // otherwise the account’s default API version will be used.
+      // If not specified the account’s default API version will be used.
+      'api_version' => '2019-08-14',
     ]);
   }
 
