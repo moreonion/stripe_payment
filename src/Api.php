@@ -33,7 +33,7 @@ class Api {
     // PaymentIntent: Make a payment immediately.
     if ($one_off->line_items) {
       return PaymentIntent::create([
-        'amount'   => $one_off->getTotalAmount(TRUE),
+        'amount'   => $one_off->totalAmount(TRUE),
         'currency' => $payment->currency_code,
       ]);
     }
