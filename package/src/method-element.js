@@ -120,7 +120,10 @@ class MethodElement {
     let data = {}
     this.$element.find('[data-stripe]').each((i, field) => {
       let keys = field.dataset.stripe.split('.')
-      deepSet(data, keys, $(field).val())
+      let value = $(field).val()
+      if (value) {
+        deepSet(data, keys, value)
+      }
     })
     return data
   }
@@ -135,9 +138,7 @@ class MethodElement {
       $('#clientsidevalidation-' + this.form_id + '-errors ul').empty()
     }
     const data = {
-      payment_method_data: {
-        billing_details: this.extraData()
-      },
+      payment_method_data: this.extraData(),
     }
     let intent = {
       name: 'paymentIntent',
