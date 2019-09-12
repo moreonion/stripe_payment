@@ -13,7 +13,7 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
     'private_key' => '',
     'public_key'  => '',
     'webhook_key' => '',
-    'field_map' => [],
+    'input_settings' => [],
     'enable_recurrent_payments' => 1,
   );
 
@@ -79,11 +79,7 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
     // Save recurrent payment record.
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     if ($recurring->line_items) {
-      $customer = $api->createCustomer($intent, [
-        // TODO: Use CreditCardForm::mappedFields()
-        'name' => Utils::getName($payment),
-        'email' => $payment->contextObj->value('email'),
-      ]);
+      $customer = $api->createCustomer($intent, $payment->method_data['customer']);
       foreach (Utils::generateSubscriptions($recurring) as $subscription_options) {
         $subscription = $api->createSubscription(['customer' => $customer->id] + $subscription_options);
         $subscription_item = reset($subscription->items->data);

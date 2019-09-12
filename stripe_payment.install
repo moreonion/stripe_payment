@@ -92,7 +92,7 @@ function stripe_payment_schema() {
 }
 
 /**
- * Create webhooks for exising payment methods.
+ * Create webhooks for exising payment methods & migrate field mappings.
  */
 function stripe_payment_update_7008() {
   $methods = entity_load('payment_method', FALSE, [
@@ -116,26 +116,25 @@ function stripe_payment_update_7007() {
 }
 
 /**
- * Update Stripe extra field names.
+ * Update Stripe input settings.
  */
 function stripe_payment_update_7006() {
-  $change_map = [
-    'address_line1' => 'address.line1',
-    'address_line2' => 'address.line2',
-    'address_zip' => 'address.postal_code',
-    'address_city' => 'address.city',
-    'address_state' => 'address.state',
-    'address_country' => 'address.country',
-  ];
   $methods = entity_load('payment_method', FALSE, [
     'controller_class_name' => 'stripe_payment_credit_card',
   ]);
   foreach ($methods as $method) {
-    $field_map = &$method->controller_data['field_map'];
-    foreach ($change_map as $old => $new) {
-      $field_map[$new] = $field_map[$old];
-      unset($field_map[$old]);
-    }
+    $map = $method->controller_data['field_map'];
+    unset($method->controller_data['field_map']);
+    $s['billing_details']['name']['keys'] = $map['name'];
+    $s['billing_details']['first_name']['keys'] = $map['first_name'];
+    $s['billing_details']['last_name']['keys'] = $map['last_name'];
+    $s['billing_details']['address_line1']['keys'] = $map['address_line1'];
+    $s['billing_details']['address_line2']['keys'] = $map['address_line2'];
+    $s['billing_details']['city']['keys'] = $map['address_city'];
+    $s['billing_details']['state']['keys'] = $map['address_state'];
+    $s['billing_details']['postcode']['keys'] = $map['address_zip'];
+    $s['billing_details']['country']['keys'] = $map['address_country'];
+    $method->controller_data['input_settings'] = $s;
     entity_save('payment_method', $method);
   }
 }

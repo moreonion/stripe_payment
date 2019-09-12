@@ -2,7 +2,10 @@
 
 namespace Drupal\stripe_payment;
 
-class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
+use Drupal\little_helpers\ElementTree;
+use Drupal\payment_forms\CreditCardForm as _CreditCardForm;
+
+class CreditCardForm extends _CreditCardForm {
   static protected $issuers = array(
     'visa'           => 'Visa',
     'mastercard'     => 'MasterCard',
@@ -76,21 +79,10 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     unset($form['expiry_date']['year']);
     unset($form['issuer']);
 
-    $ed = array(
+    $form['extra_data'] = array(
       '#type' => 'container',
       '#attributes' => array('class' => array('stripe-extra-data')),
-    ) + $this->mappedFields($payment);
-
-    // Stripe does only use the name attribute instead of first_name / last_name.
-    if (!isset($ed['name']) && isset($ed['first_name']) && isset($ed['last_name'])) {
-      $ed['name'] = $ed['first_name'];
-      $ed['name']['#value'] .= ' ' . $ed['last_name']['#value'];
-      $ed['name']['#attributes']['data-stripe'] = 'name';
-    }
-    unset($ed['first_name']);
-    unset($ed['last_name']);
-
-    $form['extra_data'] = $ed;
+    ) + CustomerDataForm::form($method->controller_data['input_settings'], $payment->contextObj);
     return $form;
   }
 
@@ -98,45 +90,7 @@ class CreditCardForm extends \Drupal\payment_forms\CreditCardForm {
     // Stripe takes care of the real validation, client-side.
     $values = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
     $payment->method_data['stripe_id'] = $values['stripe_id'];
+    $payment->method_data['customer'] = CustomerDataForm::getData($element);
   }
 
-  protected function mappedFields(\Payment $payment) {
-    $fields = array();
-    $field_map = $payment->method->controller_data['field_map'];
-    foreach (static::extraDataFields() as $name => $field) {
-      $map = isset($field_map[$name]) ? $field_map[$name] : array();
-      foreach ($map as $key) {
-        if ($value = $payment->contextObj->value($key)) {
-          $field['#value'] = $value;
-          $fields[$name] = $field;
-        }
-      }
-    }
-    return $fields;
-  }
-
-  public static function extraDataFields() {
-    $fields = array();
-    $f = array(
-      'name' => t('Name'),
-      'first_name' => t('First name'),
-      'last_name' => t('Last name'),
-      'email' => t('Email address'),
-      'phone' => t('Phone number'),
-      'address.line1' => t('Address line 1'),
-      'address.line2' => t('Address line 2'),
-      'address.city' => t('City'),
-      'address.state' => t('State'),
-      'address.postal_code' => t('Postal code'),
-      'address.country' => t('Country'),
-    );
-    foreach ($f as $name => $title) {
-      $fields[$name] = array(
-        '#type' => 'hidden',
-        '#title' => $title,
-        '#attributes' => array('data-stripe' => $name),
-      );
-    }
-    return $fields;
-  }
 }

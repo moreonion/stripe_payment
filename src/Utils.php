@@ -158,22 +158,4 @@ abstract class Utils {
     return $date;
   }
 
-  /**
-   * Generate the customer name.
-   *
-   * @param \Payment $payment
-   *   The payment to get the name from.
-   *
-   * @return string
-   *   The customer name.
-   */
-  public function getName(\Payment $payment) {
-    $context = $payment->contextObj;
-    return trim(
-      $context->value('title') . ' ' .
-      $context->value('first_name') . ' ' .
-      $context->value('last_name')
-    );
-  }
-
 }

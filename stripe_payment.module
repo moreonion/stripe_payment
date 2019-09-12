@@ -252,3 +252,11 @@ function stripe_payment_payment_update(Payment $payment) {
 function stripe_payment_payment_delete(Payment $payment) {
   db_delete('stripe_payment')->condition('pid', $payment->pid)->execute();
 }
+
+/**
+ * Element validate callback: Comma separated keys.
+ */
+function _stripe_payment_validate_comma_separated_keys($element, &$form_state, $form) {
+  $keys = array_map('trim', explode(',', $element['#value']));
+  form_set_value($element, $keys, $form_state);
+}
