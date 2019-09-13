@@ -217,14 +217,11 @@ function stripe_payment_entity_load(array $entities, $entity_type) {
  */
 function stripe_payment_payment_insert(Payment $payment) {
   if ($payment->method->controller instanceof CreditCardController) {
-    $data = !empty($payment->stripe) ? $payment->stripe : [];
-    $data += [
-      'stripe_id' => '',
-      'type' => '',
-      'plan_id' => '',
-    ];
-    $data['pid'] = $payment->pid;
-    db_insert('stripe_payment')->fields($data)->execute();
+    if (!empty($payment->stripe)) {
+      $data = $payment->stripe;
+      $data['pid'] = $payment->pid;
+      db_insert('stripe_payment')->fields($data)->execute();
+    }
   }
 }
 
@@ -233,16 +230,13 @@ function stripe_payment_payment_insert(Payment $payment) {
  */
 function stripe_payment_payment_update(Payment $payment) {
   if ($payment->method->controller instanceof CreditCardController) {
-    $data = !empty($payment->stripe) ? $payment->stripe : [];
-    $data += [
-      'stripe_id' => '',
-      'type' => '',
-      'plan_id' => '',
-    ];
-    db_update('stripe_payment')
-      ->fields($data)
-      ->condition('pid', $payment->pid)
-      ->execute();
+    if (!empty($payment->stripe)) {
+      $data = $payment->stripe;
+      $update = db_merge('stripe_payment')
+        ->key(['pid' => $payment->pid])
+        ->fields($data)
+        ->execute();
+    }
   }
 }
 
