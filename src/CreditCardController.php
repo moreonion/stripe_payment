@@ -9,13 +9,13 @@ use Drupal\webform_paymethod_select\PaymentRecurrentController;
  */
 class CreditCardController extends \PaymentMethodController implements PaymentRecurrentController {
 
-  public $controller_data_defaults = array(
+  public $controller_data_defaults = [
     'private_key' => '',
     'public_key'  => '',
     'webhook_key' => '',
     'input_settings' => [],
     'enable_recurrent_payments' => 1,
-  );
+  ];
 
   /**
    * Create a new controller instance.
@@ -29,6 +29,9 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
 
   /**
    * Get a payment form.
+   *
+   * @return CreditCardForm
+   *   A new credit card form.
    */
   public function paymentForm() {
     return new CreditCardForm();
@@ -36,6 +39,9 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
 
   /**
    * Get a form for configuring the payment method.
+   *
+   * @return CreditCardConfigurationForm
+   *   A new credit card configuration form.
    */
   public function configurationForm() {
     return new CreditCardConfigurationForm();
@@ -43,6 +49,15 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
 
   /**
    * Check whether this payment method is available for a payment.
+   *
+   * @param \Payment $payment
+   *   The payment to validate.
+   * @param \PaymentMethod $method
+   *   The payment method to check against.
+   * @param bool $strict
+   *   Whether to validate everything a payment method needs.
+   *
+   * @throws PaymentValidationException
    */
   public function validate(\Payment $payment, \PaymentMethod $method, $strict) {
     parent::validate($payment, $method, $strict);
@@ -51,7 +66,7 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
       throw new \PaymentValidationException(t('The stripe-php library could not be found.'));
     }
     if (version_compare($library['version'], '3', '<')) {
-      throw new \PaymentValidationException(t('stripe_payment needs at least version 3 of the stripe-php library (installed: @version).', array('@version' => $library['version'])));
+      throw new \PaymentValidationException(t('stripe_payment needs at least version 3 of the stripe-php library (installed: @version).', ['@version' => $library['version']]));
     }
 
     list($one_off, $recurring) = Utils::splitRecurring($payment);
@@ -62,6 +77,12 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
 
   /**
    * Execute the payment transaction.
+   *
+   * @param \Payment $payment
+   *   The payment to execute.
+   *
+   * @return bool
+   *   Whether the payment was successfully executed or not.
    */
   public function execute(\Payment $payment) {
     $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
@@ -86,6 +107,7 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
       }
     }
     entity_save('payment', $payment);
+    return TRUE;
   }
 
   /**

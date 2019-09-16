@@ -256,22 +256,22 @@ class CustomerDataForm {
             ],
           ];
         }
-        $fieldset['required'] = array(
+        $fieldset['required'] = [
           '#type' => 'checkbox',
           '#title' => t('Required'),
           '#states' => ['disabled' => ["#$display_id" => ['value' => 'hidden']]],
           '#default_value' => $defaults['required'],
           '#access' => !$required,
           '#states' => ['visible' => ["#$enabled_id" => ['checked' => TRUE]]],
-        );
-        $fieldset['keys'] = array(
+        ];
+        $fieldset['keys'] = [
           '#type' => 'textfield',
           '#title' => t('Context keys'),
           '#description' => t('When building the form these (comma separated) keys are used to ask the Payment Context for a (default) value for this field.'),
           '#default_value' => implode(', ', $defaults['keys']),
           '#element_validate' => ['_stripe_payment_validate_comma_separated_keys'],
           '#states' => ['visible' => ["#$enabled_id" => ['checked' => TRUE]]],
-        );
+        ];
       }
       $parent['#settings_element'][$key] = &$fieldset;
       $element['#settings_element'] = &$fieldset;
@@ -314,7 +314,7 @@ class CustomerDataForm {
       }
     });
 
-    // Stripe does only use the name attribute instead of first_name / last_name.
+    // Stripe only uses the name attribute instead of first_name/last_name.
     $bd = &$data_fieldset['billing_details'];
     if (empty($bd['name']['#default_value'])) {
       $bd['name']['#default_value'] = trim($bd['first_name']['#default_value'] . ' ' . $bd['last_name']['#default_value']);

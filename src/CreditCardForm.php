@@ -2,38 +2,37 @@
 
 namespace Drupal\stripe_payment;
 
-use Drupal\little_helpers\ElementTree;
 use Drupal\payment_forms\CreditCardForm as _CreditCardForm;
 
+/**
+ * Stripe credit card form.
+ */
 class CreditCardForm extends _CreditCardForm {
-  static protected $issuers = array(
-    'visa'           => 'Visa',
-    'mastercard'     => 'MasterCard',
-    'amex'           => 'American Express',
-    'jcb'            => 'JCB',
-    'discover'       => 'Discover',
-    'diners_club'    => 'Diners Club',
-  );
-  static protected $cvc_label = array(
-    'visa'           => 'CVV2 (Card Verification Value 2)',
-    'amex'           => 'CID (Card Identification Number)',
-    'mastercard'     => 'CVC2 (Card Validation Code 2)',
-    'jcb'            => 'CSC (Card Security Code)',
-    'discover'       => 'CID (Card Identification Number)',
-    'diners_club'    => 'CSC (Card Security Code)',
-  );
 
+  /**
+   * Add form elements for Stripe credit card payments.
+   *
+   * @param array $form
+   *   The Drupal form array.
+   * @param array $form_state
+   *   The Drupal form_state array.
+   * @param \Payment $payment
+   *   The payment object.
+   *
+   * @return array
+   *   The updated form array.
+   */
   public function form(array $form, array &$form_state, \Payment $payment) {
     $form = parent::form($form, $form_state, $payment);
     $method = &$payment->method;
 
     $intent = Api::init($method)->createIntent($payment);
-    $settings['stripe_payment']['pmid_' . $method->pmid] = array(
+    $settings['stripe_payment']['pmid_' . $method->pmid] = [
       'public_key' => $method->controller_data['public_key'],
       'client_secret' => $intent->client_secret,
       'intent_type' => $intent->object,
       'pmid' => $method->pmid,
-    );
+    ];
     $form['#attached']['js'][] = [
       'type' => 'setting',
       'data' => $settings,
@@ -46,46 +45,56 @@ class CreditCardForm extends _CreditCardForm {
       'type' => 'file',
     ];
 
-    // insert stripe id field
-    $form['stripe_id'] = array(
+    // Insert stripe id field.
+    $form['stripe_id'] = [
       '#type' => 'hidden',
-    );
+    ];
 
-    // override payment fields
+    // Override payment fields.
     $form['credit_card_number'] = [
       '#type' => 'stripe_payment_field',
       '#field_name' => 'cardNumber',
       '#attributes' => [
-        'class' => ['cc-number']
+        'class' => ['cc-number'],
       ],
     ] + $form['credit_card_number'];
     $form['secure_code'] = [
       '#type' => 'stripe_payment_field',
       '#field_name' => 'cardCvc',
       '#attributes' => [
-        'class' => ['cc-cvv']
+        'class' => ['cc-cvv'],
       ],
     ] + $form['secure_code'];
     $form['expiry_date'] = [
       '#type' => 'stripe_payment_field',
       '#field_name' => 'cardExpiry',
       '#attributes' => [
-        'class' => ['cc-expiry']
+        'class' => ['cc-expiry'],
       ],
     ] + $form['expiry_date'];
 
-    // remove unused default fields
+    // Remove unused default fields.
     unset($form['expiry_date']['month']);
     unset($form['expiry_date']['year']);
     unset($form['issuer']);
 
-    $form['extra_data'] = array(
+    $form['extra_data'] = [
       '#type' => 'container',
-      '#attributes' => array('class' => array('stripe-extra-data')),
-    ) + CustomerDataForm::form($method->controller_data['input_settings'], $payment->contextObj);
+      '#attributes' => ['class' => ['stripe-extra-data']],
+    ] + CustomerDataForm::form($method->controller_data['input_settings'], $payment->contextObj);
     return $form;
   }
 
+  /**
+   * Store relevant values in the payment’s method_data.
+   *
+   * @param array $element
+   *   The Drupal elements array.
+   * @param array $form_state
+   *   The Drupal form_state array.
+   * @param \Payment $payment
+   *   The payment object.
+   */
   public function validate(array $element, array &$form_state, \Payment $payment) {
     // Stripe takes care of the real validation, client-side.
     $values = drupal_array_get_nested_value($form_state['values'], $element['#parents']);

@@ -18,6 +18,12 @@ class Api {
 
   /**
    * Load the library and set global settings.
+   *
+   * @param \PaymentMethod $method
+   *   A Stripe payment method.
+   *
+   * @return Api
+   *   A new Api instance.
    */
   public static function init(\PaymentMethod $method) {
     libraries_load('stripe-php');
@@ -26,9 +32,16 @@ class Api {
   }
 
   /**
-   * Create a new payment intent using the API.
+   * Create a new payment/setup intent using the API.
+   *
+   * @param \Payment $payment
+   *   The payment for which to create an intent.
+   *
+   * @return \Stripe\PaymentIntent|\Stripe\SetupIntent
+   *   A payment intent for one off (or one off + reccurring) payments or
+   *   a setup intent if there are only recurring line items.
    */
-  public function createIntent($payment) {
+  public function createIntent(\Payment $payment) {
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     // PaymentIntent: Make a payment immediately.
     if ($one_off->line_items) {
@@ -45,9 +58,9 @@ class Api {
    * Get a payment intent by its ID from the API.
    *
    * @param string $id
-   *   The indent ID.
+   *   The intent ID.
    *
-   * @return \Stripe\PaymentIndent|\Stripe\SetupIndent
+   * @return \Stripe\PaymentIntent|\Stripe\SetupIntent
    *   The intent identified by the ID.
    */
   public function retrieveIntent($id) {
@@ -61,6 +74,14 @@ class Api {
 
   /**
    * Create a new customer using the API.
+   *
+   * @param \Stripe\PaymentIntent|\Stripe\SetupIntent $intent
+   *   The intent object with the customers payment data.
+   * @param array $extra_data
+   *   Additional data about the customer.
+   *
+   * @return \Stripe\Customer
+   *   The customer.
    */
   public function createCustomer($intent, array $extra_data) {
     return Customer::create([
@@ -72,7 +93,15 @@ class Api {
   }
 
   /**
-   * Create a new subscription based on a plan and create the product if needed.
+   * Create a new subscription based on a plan using the API.
+   *
+   * The plan and the product will be created too if they do not exist yet.
+   *
+   * @param array $options
+   *   Array containing 'customer', 'subscription', 'plan' and 'product' data.
+   *
+   * @return \Stripe\Subscription
+   *   The subscription.
    */
   public function createSubscription(array $options) {
     try {
@@ -101,9 +130,15 @@ class Api {
   }
 
   /**
-   * Register a new webhook endpoint.
+   * Register a new webhook endpoint using the API.
+   *
+   * @param string $url
+   *   The URL of the webhook endpoint.
+   *
+   * @return \Stripe\WebhookEndpoint
+   *   The registered webhook endpoint.
    */
-  public function registerWebhook($url) {
+  public function registerWebhook(string $url) {
     return WebhookEndpoint::create([
       'url' => $url,
       'enabled_events' => [

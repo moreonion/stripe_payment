@@ -2,8 +2,29 @@
 
 namespace Drupal\stripe_payment;
 
-class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInterface {
+use Drupal\payment_forms\MethodFormInterface;
+use Stripe\Account;
+use Stripe\Stripe;
+use Stripe\Exception\ApiErrorException;
 
+/**
+ * Configuration form for the Stripe payment method controller.
+ */
+class CreditCardConfigurationForm implements MethodFormInterface {
+
+  /**
+   * Add form elements to the configuration form.
+   *
+   * @param array $form
+   *   The Drupal form array.
+   * @param array $form_state
+   *   The Drupal form_state array.
+   * @param \PaymentMethod $method
+   *   The Stripe payment method.
+   *
+   * @return array
+   *   The updated form array.
+   */
   public function form(array $form, array &$form_state, \PaymentMethod $method) {
     $cd = $method->controller_data;
 
@@ -12,21 +33,21 @@ class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInt
       drupal_set_message($library['error message'], 'error', FALSE);
     }
 
-    $form['private_key'] = array(
+    $form['private_key'] = [
       '#type' => 'textfield',
       '#title' => t('Private key'),
       '#description' => t('Available from Your Account / Developers / API keys'),
-      '#required' => true,
+      '#required' => TRUE,
       '#default_value' => $cd['private_key'],
-    );
+    ];
 
-    $form['public_key'] = array(
+    $form['public_key'] = [
       '#type' => 'textfield',
       '#title' => t('Public key'),
       '#description' => t('Available from Your Account / Developers / API keys'),
-      '#required' => true,
+      '#required' => TRUE,
       '#default_value' => $cd['public_key'],
-    );
+    ];
 
     $form['enable_recurrent_payments'] = [
       '#type' => 'checkbox',
@@ -42,6 +63,16 @@ class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInt
     return $form;
   }
 
+  /**
+   * Validate the submitted values and put them in the method’s controller data.
+   *
+   * @param array $element
+   *   The Drupal elements array.
+   * @param array $form_state
+   *   The Drupal form_state array.
+   * @param \PaymentMethod $method
+   *   The payment method.
+   */
   public function validate(array $element, array &$form_state, \PaymentMethod $method) {
     $cd = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
     foreach ($cd['field_map'] as $k => &$v) {
@@ -59,14 +90,14 @@ class CreditCardConfigurationForm implements \Drupal\payment_forms\MethodFormInt
     else {
       libraries_load('stripe-php');
       try {
-        \Stripe\Stripe::setApiKey($cd['private_key']);
-        \Stripe\Account::retrieve();
+        Stripe::setApiKey($cd['private_key']);
+        Account::retrieve();
       }
-      catch(\Stripe\Exception\ApiErrorException $e) {
-        $values = array(
+      catch (ApiErrorException $e) {
+        $values = [
           '@status'   => $e->getHttpStatus(),
           '@message'  => $e->getMessage(),
-        );
+        ];
         $msg = t('Unable to contact stripe using this set of keys: HTTP @status: @message.', $values);
         form_error($element['private_key'], $msg);
       }
