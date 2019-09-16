@@ -24,7 +24,7 @@ abstract class Utils {
       $is_recurring = !empty($line_item->recurrence->interval_unit);
       $items[$is_recurring][$name] = $line_item;
     }
-    $common = ['currency' => $payment->currency];
+    $common = ['currency_code' => $payment->currency_code];
     return [
       new \Payment(['line_items' => $items[FALSE]] + $common),
       new \Payment(['line_items' => $items[TRUE]] + $common),
@@ -102,7 +102,7 @@ abstract class Utils {
     return [
       'id' => $id,
       'amount' => 100,
-      'currency' => '$currency',
+      'currency' => $currency,
       'interval' => rtrim($interval, 'ly'),
       'interval_count' => $interval_count,
       'nickname' => $description,

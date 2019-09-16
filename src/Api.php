@@ -80,7 +80,7 @@ class Api {
       $subscription = Subscription::create(['customer' => $options['customer']] + $options['subscription']);
     }
     catch (InvalidRequest $e) {
-      if ($e->getStripeCode() !== 'resource_already_exists') {
+      if ($e->getStripeCode() !== 'resource_missing') {
         throw $e;
       }
       try {
@@ -88,14 +88,14 @@ class Api {
         Plan::create($options['plan']);
       }
       catch (InvalidRequest $e) {
-        if ($e->getStripeCode() !== 'resource_already_exists') {
+        if ($e->getStripeCode() !== 'resource_missing') {
           throw $e;
         }
         // Create a new plan together with a new product.
         $plan['product'] = $options['product'];
         Plan::create($plan);
       }
-      $subscription = Subscription::create($options);
+      $subscription = Subscription::create($options['subscription']);
     }
     return $subscription;
   }

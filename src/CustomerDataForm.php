@@ -388,6 +388,7 @@ class CustomerDataForm {
     }
     unset($customer['first_name']);
     unset($customer['last_name']);
+    return $customer;
   }
 
   /**

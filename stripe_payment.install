@@ -92,7 +92,7 @@ function stripe_payment_schema() {
 }
 
 /**
- * Create webhooks for exising payment methods & migrate field mappings.
+ * Create webhooks for exising payment methods.
  */
 function stripe_payment_update_7008() {
   $methods = entity_load('payment_method', FALSE, [

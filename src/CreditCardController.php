@@ -54,10 +54,9 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
       throw new \PaymentValidationException(t('stripe_payment needs at least version 3 of the stripe-php library (installed: @version).', array('@version' => $library['version'])));
     }
 
-    if ($payment->contextObj && ($interval = $payment->contextObj->value('donation_interval'))) {
-      if (empty($method->controller_data['enable_recurrent_payments']) && in_array($interval, ['m', 'y'])) {
-        throw new \PaymentValidationException(t('Recurrent payments are disabled for this payment method.'));
-      }
+    list($one_off, $recurring) = Utils::splitRecurring($payment);
+    if ($recurring->line_items && empty($method->controller_data['enable_recurrent_payments'])) {
+      throw new \PaymentValidationException(t('Recurrent payments are disabled for this payment method.'));
     }
   }
 
