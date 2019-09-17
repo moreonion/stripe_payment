@@ -86,41 +86,32 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
    */
   public function execute(\Payment $payment) {
     $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
-    entity_save('payment', $payment);
 
     $api = Api::init($payment->method);
     $intent = $api->retrieveIntent($payment->method_data['stripe_id']);
+    $payment->stripe = [
+      'stripe_id' => $intent->id,
+      'type'      => $intent->object,
+    ];
+    entity_save('payment', $payment);
 
-    // Save one off payment record.
-    if ($intent->object == 'payment_intent') {
-      $payment->stripe = $this->createRecord($intent);
-    }
-
-    // Save recurrent payment record.
+    // Make subscriptions for recurrent payments.
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     if ($recurring->line_items) {
       $customer = $api->createCustomer($intent, $payment->method_data['customer']);
       foreach (Utils::generateSubscriptions($recurring) as $subscription_options) {
         $subscription = $api->createSubscription(['customer' => $customer->id] + $subscription_options);
-        $subscription_item = reset($subscription->items->data);
-        $payment->stripe = $this->createRecord($subscription, $subscription_item->plan->id);
+        db_insert('stripe_payment_subscriptions')
+          ->fields([
+            'pid' => $payment->pid,
+            'stripe_id' => $subscription->id,
+            'plan' => $subscription->plan->id,
+            'amount' => $subscription->plan->amount * $subscription->quantity / 100,
+            'billing_cycle_anchor' => $subscription->billing_cycle_anchor,
+          ])->execute();
       }
     }
-    entity_save('payment', $payment);
     return TRUE;
-  }
-
-  /**
-   * Create a record for the {stripe_payment} table.
-   */
-  protected function createRecord($stripe, $plan_id = NULL) {
-    return [
-      // Subscription id (sub_) or payment intent id (pi_).
-      'stripe_id' => $stripe->id,
-      // "subscription" or "payment_intent".
-      'type'      => $stripe->object,
-      'plan_id'   => $plan_id,
-    ];
   }
 
 }

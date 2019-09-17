@@ -218,7 +218,6 @@ function stripe_payment_entity_load(array $entities, $entity_type) {
       $payment->stripe = [
         'stripe_id' => $data['stripe_id'],
         'type' => $data['type'],
-        'plan_id' => $data['plan_id'],
       ];
     }
   }

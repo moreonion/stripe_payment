@@ -12,48 +12,6 @@
  * stores serialized PaymentMethodController objects.
  */
 function stripe_payment_schema() {
-  $schema['stripe_payment_plans'] = [
-    'fields' => [
-      'pid' => [
-        'type' => 'serial',
-      ],
-      'id' => [
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => '',
-      ],
-      'amount' => [
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'default'  => 0,
-        'not null' => TRUE,
-      ],
-      'payment_interval' => [
-        'type' => 'varchar',
-        'length' => 25,
-        'not null' => TRUE,
-        'default' => '',
-      ],
-      'name' => [
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => '',
-      ],
-      'currency' => [
-        'type' => 'varchar',
-        'length' => 5,
-        'not null' => TRUE,
-        'default' => '',
-      ],
-    ],
-    'primary key' => ['pid'],
-    'unique keys' => [
-      'pid' => ['pid'],
-      'id' => ['id'],
-    ],
-  ];
   $schema['stripe_payment'] = [
     'fields' => [
       'pid' => [
@@ -74,12 +32,6 @@ function stripe_payment_schema() {
         'default'  => '',
         'not null' => TRUE,
       ],
-      'plan_id' => [
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
-        'default' => '',
-      ],
     ],
     'primary key' => ['pid'],
     'unique keys' => [
@@ -87,7 +39,69 @@ function stripe_payment_schema() {
       'stripe_id' => ['stripe_id'],
     ],
   ];
+  $schema['stripe_payment_subscriptions'] = [
+    'fields' => [
+      'pid' => [
+        'description' => 'The payment id.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'stripe_id' => [
+        'description' => 'The subscription id.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'plan' => [
+        'description' => 'The plan id.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'amount' => [
+        'description' => 'Payment amount in payment’s currency.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'default'  => 0,
+        'not null' => TRUE,
+      ],
+      'billing_cycle_anchor' => [
+        'description' => 'The date of the first full invoice, fixing the (day of) the month for subsequent invoices.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ],
+    ],
+    'primary key' => ['stripe_id'],
+    'unique keys' => [
+      'stripe_id' => ['stripe_id'],
+    ],
+  ];
   return $schema;
+}
+
+/**
+ * Migrate from stripe_payment_plans to stripe_payment_subscriptions table.
+ */
+function stripe_payment_update_7009() {
+  // Create new table.
+  $schema = stripe_payment_schema();
+  db_create_table('stripe_payment_subscriptions', $schema['stripe_payment_subscriptions']);
+  // Copy old plan data.
+  $query = db_select('stripe_payment_plans', 'p');
+  $query->join('stripe_payment', 's', 'p.id=s.plan_id');
+  $query->addField('s', 'pid');
+  $query->addField('s', 'stripe_id');
+  $query->addField('p', 'id', 'plan');
+  $query->addExpression('FLOOR(p.amount/100)', 'amount');
+  db_insert('stripe_payment_subscriptions')
+    ->from($query)
+    ->execute();
+  // Drop old table and reference.
+  db_drop_table('stripe_payment_plans');
+  db_drop_field('stripe_payment', 'plan_id');
 }
 
 /**
