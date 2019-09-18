@@ -7,6 +7,7 @@
 
 use Drupal\stripe_payment\Api;
 use Drupal\stripe_payment\CreditCardController;
+use Stripe\Event;
 use Stripe\Webhook;
 use Stripe\Exception\SignatureVerificationException;
 
@@ -137,8 +138,8 @@ function stripe_payment_webhook($method) {
   }
 
   $event_types = [
-    'succeeded' => ['payment_intent.succeeded', 'setup_intent.secceeded'],
-    'failed' => ['payment_intent.payment_failed', 'setup_intent.setup_failed'],
+    'succeeded' => [Event::PAYMENT_INTENT_SUCCEEDED, Event::SETUP_INTENT_SUCCEEDED],
+    'failed' => [Event::PAYMENT_INTENT_PAYMENT_FAILED, Event::SETUP_INTENT_SETUP_FAILED],
   ];
   if (!in_array($event->type, array_merge($event_types['succeeded'], $event_types['failed']))) {
     return 'Ignoring unkown event';

@@ -3,6 +3,7 @@
 namespace Drupal\stripe_payment;
 
 use Stripe\Customer;
+use Stripe\Event;
 use Stripe\Exception\InvalidRequestException;
 use Stripe\PaymentIntent;
 use Stripe\Plan;
@@ -142,10 +143,10 @@ class Api {
     return WebhookEndpoint::create([
       'url' => $url,
       'enabled_events' => [
-        'setup_intent.succeeded',
-        'setup_intent.setup_failed',
-        'payment_intent.payment_failed',
-        'payment_intent.succeeded',
+        Event::SETUP_INTENT_SUCCEEDED,
+        Event::SETUP_INTENT_SETUP_FAILED,
+        Event::PAYMENT_INTENT_PAYMENT_FAILED,
+        Event::PAYMENT_INTENT_SUCCEEDED,
       ],
       // If not specified the account’s default API version will be used.
       'api_version' => '2019-08-14',
