@@ -41,7 +41,7 @@ class CreditCardForm extends _CreditCardForm {
       'type' => 'external',
       'group' => JS_LIBRARY,
     ];
-    $form['#attached']['js'][drupal_get_path('module', 'stripe_payment') . '/js/stripe.min.js'] = [
+    $form['#attached']['js'][drupal_get_path('module', 'stripe_payment') . '/stripe.min.js'] = [
       'type' => 'file',
     ];
 
