@@ -122,10 +122,10 @@ class Api {
           throw $e;
         }
         // Create a new plan together with a new product.
-        $plan['product'] = $options['product'];
-        Plan::create($plan);
+        $options['plan']['product'] = $options['product'];
+        Plan::create($options['plan']);
       }
-      $subscription = Subscription::create($options['subscription']);
+      $subscription = Subscription::create(['customer' => $options['customer']] + $options['subscription']);
     }
     return $subscription;
   }
