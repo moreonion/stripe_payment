@@ -152,13 +152,11 @@ class MethodElement {
       this.settings.client_secret, this.cardNumberElement, data
     ).then((result) => {
       if (result.error) {
-        console.log(result.error)
         this.errorHandler(result.error.message)
         submitter.error()
       }
       else {
         this.setStripeId(result[intent.name].id)
-        console.log('Success!!!!')
         submitter.ready()
       }
     })
