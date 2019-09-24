@@ -18,6 +18,29 @@ use Stripe\WebhookEndpoint;
 class Api {
 
   const API_VERSION = '2019-09-09';
+  const MODULE_BRANCH = '7.x-1.x';
+  const MODULE_URL = 'https://github.com/moreonion/stripe_payment';
+  const PARTNER_KEY = 'pp_partner_FWt5K2Mb47nSUP';
+
+  protected static $version = NULL;
+
+  /**
+   * Get the stripe_payment module version.
+   *
+   * @return string
+   *   The module’s version (eg. '7.x-1.0').
+   */
+  public static function getModuleVersion() {
+    if (!static::$version) {
+      $info = unserialize(db_select('system', 's')
+        ->fields('s', ['info'])
+        ->condition('name', 'stripe_payment')
+        ->execute()
+        ->fetchField());
+      static::$version = $info['version'] ?? static::MODULE_BRANCH;
+    }
+    return static::$version;
+  }
 
   /**
    * Load the library and set global settings.
@@ -31,6 +54,7 @@ class Api {
   public static function init(\PaymentMethod $method) {
     libraries_load('stripe-php');
     Stripe::setApiVersion(static::API_VERSION);
+    Stripe::setAppInfo('drupal/stripe-payment', static::getModuleVersion(), static::MODULE_URL, static::PARTNER_KEY);
     Stripe::setApiKey($method->controller_data['private_key']);
     return new static();
   }
