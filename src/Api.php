@@ -17,6 +17,8 @@ use Stripe\WebhookEndpoint;
  */
 class Api {
 
+  const API_VERSION = '2019-09-09';
+
   /**
    * Load the library and set global settings.
    *
@@ -28,6 +30,7 @@ class Api {
    */
   public static function init(\PaymentMethod $method) {
     libraries_load('stripe-php');
+    Stripe::setApiVersion(static::API_VERSION);
     Stripe::setApiKey($method->controller_data['private_key']);
     return new static();
   }
@@ -148,8 +151,6 @@ class Api {
         Event::PAYMENT_INTENT_PAYMENT_FAILED,
         Event::PAYMENT_INTENT_SUCCEEDED,
       ],
-      // If not specified the account’s default API version will be used.
-      'api_version' => '2019-08-14',
     ]);
   }
 
