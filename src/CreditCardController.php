@@ -55,7 +55,7 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
    * @param \PaymentMethod $method
    *   The payment method to check against.
    * @param bool $strict
-   *   Whether to validate everything a payment method needs.
+   *   Whether to validate everything a payment for this method needs.
    *
    * @throws PaymentValidationException
    */
@@ -69,9 +69,21 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
       throw new \PaymentValidationException(t('stripe_payment needs at least version 3 of the stripe-php library (installed: @version).', ['@version' => $library['version']]));
     }
 
+    if (!$strict) {
+      return;
+    }
+
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     if ($recurring->line_items && empty($method->controller_data['enable_recurrent_payments'])) {
       throw new \PaymentValidationException(t('Recurrent payments are disabled for this payment method.'));
+    }
+    if (!$recurring->line_items && !((int) $one_off->totalAmount(TRUE) > 0)) {
+      throw new \PaymentValidationException(t('Stripe requires a positive integer as total amount.'));
+    }
+    foreach (array_values($recurring->line_items) as $line_item) {
+      if (!((int) $line_item->totalAmount(TRUE) > 0)) {
+        throw new \PaymentValidationException(t('Recurrent line-items require a positive integer as total amount.'));
+      }
     }
   }
 
