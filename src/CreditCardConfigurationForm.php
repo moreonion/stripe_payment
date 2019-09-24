@@ -75,9 +75,6 @@ class CreditCardConfigurationForm implements MethodFormInterface {
    */
   public function validate(array $element, array &$form_state, \PaymentMethod $method) {
     $cd = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
-    foreach ($cd['field_map'] as $k => &$v) {
-      $v = array_filter(array_map('trim', explode(',', $v)));
-    }
 
     $library = libraries_detect('stripe-php');
     if (empty($library['installed'])) {
