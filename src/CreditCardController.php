@@ -3,6 +3,7 @@
 namespace Drupal\stripe_payment;
 
 use Drupal\webform_paymethod_select\PaymentRecurrentController;
+use Stripe\Exception\ApiErrorException;
 
 /**
  * Payment method controller for stripe credit card payments.
@@ -110,17 +111,27 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
     // Make subscriptions for recurrent payments.
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     if ($recurring->line_items) {
-      $customer = $api->createCustomer($intent, $payment->method_data['customer']);
-      foreach (Utils::generateSubscriptions($recurring) as $subscription_options) {
-        $subscription = $api->createSubscription(['customer' => $customer->id] + $subscription_options);
-        db_insert('stripe_payment_subscriptions')
-          ->fields([
-            'pid' => $payment->pid,
-            'stripe_id' => $subscription->id,
-            'plan' => $subscription->plan->id,
-            'amount' => $subscription->plan->amount * $subscription->quantity / 100,
-            'billing_cycle_anchor' => $subscription->billing_cycle_anchor,
-          ])->execute();
+      try {
+        $customer = $api->createCustomer($intent, $payment->method_data['customer']);
+        foreach (Utils::generateSubscriptions($recurring) as $subscription_options) {
+          $subscription = $api->createSubscription(['customer' => $customer->id] + $subscription_options);
+          db_insert('stripe_payment_subscriptions')
+            ->fields([
+              'pid' => $payment->pid,
+              'stripe_id' => $subscription->id,
+              'plan' => $subscription->plan->id,
+              'amount' => $subscription->plan->amount * $subscription->quantity / 100,
+              'billing_cycle_anchor' => $subscription->billing_cycle_anchor,
+            ])->execute();
+        }
+      }
+      catch (ApiErrorException $e) {
+        $message = 'Stripe API error for recurrent payment (pmid: @pmid). @description.';
+        $variables = ['@description' => $e->getMessage(), '@pmid' => $method->pmid];
+        watchdog('stripe_payment', $message, $variables, WATCHDOG_WARNING);
+        $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
+        entity_save('payment', $payment);
+        return FALSE;
       }
     }
     return TRUE;

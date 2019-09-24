@@ -119,8 +119,13 @@ abstract class Utils {
    *   A stub subscription data array (add 'customer' and 'items').
    */
   public static function subscriptionData(\PaymentLineItem $line_item) {
-    // Start with the next full billing cycle.
-    $options['prorate'] = FALSE;
+    $options = [
+      // Expect no more user interaction.
+      'off_session' => TRUE,
+      'payment_behavior' => 'error_if_incomplete',
+      // Start with the next full billing cycle.
+      'prorate' => FALSE,
+    ];
     if ($start_date = self::getStartDate($line_item)) {
       $options['billing_cycle_anchor'] = $start_date->getTimestamp();
     }
