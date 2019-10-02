@@ -178,4 +178,15 @@ class Api {
     ]);
   }
 
+  /**
+   * Delete a webhook endpoint using the API.
+   *
+   * @param string $id
+   *   The id of the webhook endpoint.
+   */
+  public function deleteWebhook(string $id) {
+    $endpoint = WebhookEndpoint::retrieve($id);
+    $endpoint->delete();
+  }
+
 }
