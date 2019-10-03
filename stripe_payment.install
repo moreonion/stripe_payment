@@ -6,89 +6,150 @@
  */
 
 /**
- * Implements hook_schema()
+ * Implements hook_schema().
  *
  * Adds the schema for the stripe_payment_payment_controllers table which
  * stores serialized PaymentMethodController objects.
  */
 function stripe_payment_schema() {
-  $schema['stripe_payment_plans'] = array(
-    'fields' => array(
-      'pid' => array(
-        'type'     => 'serial',
-      ),
-      'id' => array(
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => '',
-
-      ),
-      'amount' => array(
-        'type'     => 'int',
-        'unsigned' => TRUE,
-        'default'  => 0,
-        'not null' => TRUE,
-      ),
-      'payment_interval' => array(
-        'type'   => 'varchar',
-        'length' => 25,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'name' => array(
-        'type'     => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'currency' => array(
-        'type'     => 'varchar',
-        'length' => 5,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-    ),
-    'primary key' => array('pid'),
-    'unique keys' => array(
-      'pid' => array('pid'),
-      'id' => array('id'),
-    ),
-  );
-  $schema['stripe_payment'] = array(
-    'fields' => array(
-     'pid' => array(
+  $schema['stripe_payment'] = [
+    'fields' => [
+      'pid' => [
         'description' => 'The payment id.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
-      ),
-      'stripe_id' => array(
+      ],
+      'stripe_id' => [
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
-      ),
-      'type' => array(
-        'type'     => 'varchar',
+      ],
+      'type' => [
+        'type' => 'varchar',
         'length' => 16,
         'default'  => '',
         'not null' => TRUE,
-      ),
-      'plan_id' => array(
-        'type'   => 'varchar',
+      ],
+    ],
+    'primary key' => ['pid'],
+    'unique keys' => [
+      'pid' => ['pid'],
+      'stripe_id' => ['stripe_id'],
+    ],
+  ];
+  $schema['stripe_payment_subscriptions'] = [
+    'fields' => [
+      'pid' => [
+        'description' => 'The payment id.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'stripe_id' => [
+        'description' => 'The subscription id.',
+        'type' => 'varchar',
         'length' => 255,
-        'not null' => FALSE,
+        'not null' => TRUE,
         'default' => '',
-      ),
-    ),
-    'primary key' => array('pid'),
-    'unique keys' => array(
-      'pid' => array('pid'),
-      'stripe_id' => array('stripe_id'),
-    ),
-  );
+      ],
+      'plan' => [
+        'description' => 'The plan id.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'amount' => [
+        'description' => 'Payment amount in payment’s currency.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'default'  => 0,
+        'not null' => TRUE,
+      ],
+      'billing_cycle_anchor' => [
+        'description' => 'The date of the first full invoice, fixing the (day of) the month for subsequent invoices.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ],
+    ],
+    'primary key' => ['stripe_id'],
+    'unique keys' => [
+      'stripe_id' => ['stripe_id'],
+    ],
+  ];
   return $schema;
+}
+
+/**
+ * Migrate from stripe_payment_plans to stripe_payment_subscriptions table.
+ */
+function stripe_payment_update_7009() {
+  // Create new table.
+  $schema = stripe_payment_schema();
+  db_create_table('stripe_payment_subscriptions', $schema['stripe_payment_subscriptions']);
+  // Copy old plan data.
+  $query = db_select('stripe_payment_plans', 'p');
+  $query->join('stripe_payment', 's', 'p.id=s.plan_id');
+  $query->addField('s', 'pid');
+  $query->addField('s', 'stripe_id');
+  $query->addField('p', 'id', 'plan');
+  $query->addExpression('FLOOR(p.amount/100)', 'amount');
+  db_insert('stripe_payment_subscriptions')
+    ->from($query)
+    ->execute();
+  // Drop old table and reference.
+  db_drop_table('stripe_payment_plans');
+  db_drop_field('stripe_payment', 'plan_id');
+}
+
+/**
+ * Create webhooks for exising payment methods.
+ */
+function stripe_payment_update_7008() {
+  $methods = entity_load('payment_method', FALSE, [
+    'controller_class_name' => 'stripe_payment_credit_card',
+  ]);
+  foreach ($methods as $method) {
+    if (empty($method->controller_data['webhook_key'])) {
+      stripe_payment_register_webhook($method);
+      entity_save('payment_method', $method);
+    }
+  }
+}
+
+/**
+ * Enable payment_recurrence.
+ */
+function stripe_payment_update_7007() {
+  if (!module_enable(['payment_recurrence'], TRUE)) {
+    throw new DrupalUpdateException('Unable to enable payment_recurrence.');
+  }
+}
+
+/**
+ * Update Stripe input settings.
+ */
+function stripe_payment_update_7006() {
+  $methods = entity_load('payment_method', FALSE, [
+    'controller_class_name' => 'stripe_payment_credit_card',
+  ]);
+  foreach ($methods as $method) {
+    $map = $method->controller_data['field_map'];
+    unset($method->controller_data['field_map']);
+    $s['billing_details']['name']['keys'] = $map['name'];
+    $s['billing_details']['first_name']['keys'] = $map['first_name'];
+    $s['billing_details']['last_name']['keys'] = $map['last_name'];
+    $s['billing_details']['address_line1']['keys'] = $map['address_line1'];
+    $s['billing_details']['address_line2']['keys'] = $map['address_line2'];
+    $s['billing_details']['city']['keys'] = $map['address_city'];
+    $s['billing_details']['state']['keys'] = $map['address_state'];
+    $s['billing_details']['postcode']['keys'] = $map['address_zip'];
+    $s['billing_details']['country']['keys'] = $map['address_country'];
+    $method->controller_data['input_settings'] = $s;
+    entity_save('payment_method', $method);
+  }
 }
 
 /**
@@ -115,10 +176,10 @@ function stripe_payment_update_7005() {
 
 /**
  * Use a machine-name instead of the FQ-class to identify the controller.
- **/
+ */
 function stripe_payment_update_7004() {
   db_update('payment_method')
-    ->fields(array('controller_class_name' => 'stripe_payment_credit_card'))
+    ->fields(['controller_class_name' => 'stripe_payment_credit_card'])
     ->condition(
       'controller_class_name',
       '\Drupal\stripe_payment\CreditCardController'
@@ -129,16 +190,16 @@ function stripe_payment_update_7004() {
  * Add config column to stripe_payment_payment_method_controller.
  */
 function stripe_payment_update_7003() {
-  db_add_field('stripe_payment_payment_method_controller', 'config', array(
+  db_add_field('stripe_payment_payment_method_controller', 'config', [
     'type' => 'text',
-  ));
+  ]);
   db_update('stripe_payment_payment_method_controller')
-    ->fields(array('config' => serialize(array('field_map' => array()))))
+    ->fields(['config' => serialize(['field_map' => []])])
     ->execute();
 }
 
 /**
- * Add stripe_payment table
+ * Add stripe_payment table.
  */
 function stripe_payment_update_7002() {
   $schema = stripe_payment_schema();
@@ -146,7 +207,7 @@ function stripe_payment_update_7002() {
 }
 
 /**
- * Add stripe_payment_plans table
+ * Add stripe_payment_plans table.
  */
 function stripe_payment_update_7001() {
   $schema = stripe_payment_schema();

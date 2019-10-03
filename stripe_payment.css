@@ -1,0 +1,9 @@
+.stripe-payment-field-iframe-wrapper {
+  border: 1px solid #ccc;
+  background-color: #fff;
+  padding: 0.5em;
+}
+
+.stripe-payment-field-iframe-wrapper.invalid {
+  border-color: #ed541d;
+}
