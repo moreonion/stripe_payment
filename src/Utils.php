@@ -153,7 +153,8 @@ abstract class Utils {
     $y = $earliest->format('Y');
     $m = $recurrence->month ?? $earliest->format('m');
     $d = $recurrence->day_of_month ?? $earliest->format('d');
-    $date = new \DateTime($y . $m . $d, new \DateTimeZone('UTC'));
+    $date = new \DateTime('', new \DateTimeZone('UTC'));
+    $date->setDate($y, $m, $d);
     // Find the first matching date after the earliest.
     $unit = rtrim($recurrence->interval_unit, 'ly');
     $count = $recurrence->interval_value ?? 1;
