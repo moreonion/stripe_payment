@@ -137,29 +137,46 @@ abstract class Utils {
    *
    * @param \PaymentLineItem $line_item
    *   A recurring line item.
+   * @param \DateTimeImmutable $now
+   *   The date and time considered to be now, defaults to now in UTC.
    *
    * @return \DateTime|null
    *   The calculated start date or
    *   `null` if the line item doesn’t include any date settings.
    */
-  public static function getStartDate(\PaymentLineItem $line_item) {
+  public static function getStartDate(\PaymentLineItem $line_item, \DateTimeImmutable $now = NULL) {
     $recurrence = $line_item->recurrence;
     if (empty($recurrence->start_date) && empty($recurrence->month) && empty($recurrence->day_of_month)) {
       return NULL;
     }
-    // Earliest possible start date.
-    $earliest = $recurrence->start_date ?? new \DateTime('tomorrow', new \DateTimeZone('UTC'));
-    // Date meeting day of month and month requirements.
-    $y = $earliest->format('Y');
+    $now = $now ?? new \DateTimeImmutable('', new \DateTimeZone('UTC'));
+    // Earliest possible date, either tomorrow or future recurrence start date.
+    $earliest = $now->modify('+1 day');
+    if (!empty($recurrence->start_date) && $recurrence->start_date > $earliest) {
+      $earliest = $recurrence->start_date;
+    }
+    // Date in the past meeting day of month and month requirements.
+    $y = $earliest->format('Y') - 1;
     $m = $recurrence->month ?? $earliest->format('m');
     $d = $recurrence->day_of_month ?? $earliest->format('d');
-    $date = new \DateTime('', new \DateTimeZone('UTC'));
-    $date->setDate($y, $m, $d);
+    $date = $now->setDate($y, $m, $d);
     // Find the first matching date after the earliest.
-    $unit = rtrim($recurrence->interval_unit, 'ly');
-    $count = $recurrence->interval_value ?? 1;
+    $find_increment = function ($recurrence) {
+      switch ($recurrence->interval_unit) {
+        case 'weekly':
+          return '1 day';
+        case 'monthly':
+          if (!empty($recurrence->month) && !empty($value = $recurrence->interval_value) && 12 % $value == 0) {
+            return "$value month";
+          }
+          return '1 month';
+        case 'yearly':
+          return !empty($recurrence->month) ? '1 year' : '1 month';
+      }
+    };
+    $increment = $find_increment($recurrence);
     while ($date < $earliest) {
-      $date->modify("$count $unit");
+      $date = $date->modify("$increment");
     }
     return $date;
   }
