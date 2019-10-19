@@ -155,10 +155,21 @@ abstract class Utils {
     if (!empty($recurrence->start_date) && $recurrence->start_date > $earliest) {
       $earliest = $recurrence->start_date;
     }
+    // Deal with negative day_of_month values.
+    $day_of_month = $recurrence->day_of_month ?? NULL;
+    $offset_days = NULL;
+    if ($day_of_month < 0) {
+      // If we are calculating from the month’s end we use the next month’s 1st
+      // instead and then add the difference as buffer to earliest so we can
+      // subtract it from the result in the end.
+      $offset_days = abs($day_of_month);
+      $day_of_month = 1;
+      $earliest = $earliest->modify("+$offset_days day");
+    }
     // Date in the past meeting day of month and month requirements.
     $y = $earliest->format('Y') - 1;
     $m = $recurrence->month ?? $earliest->format('m');
-    $d = $recurrence->day_of_month ?? $earliest->format('d');
+    $d = $day_of_month ?? $earliest->format('d');
     $date = $now->setDate($y, $m, $d);
     // Find the first matching date after the earliest.
     $find_increment = function ($recurrence) {
@@ -177,6 +188,9 @@ abstract class Utils {
     $increment = $find_increment($recurrence);
     while ($date < $earliest) {
       $date = $date->modify("$increment");
+    }
+    if ($offset_days) {
+      $date = $date->modify("-$offset_days day");
     }
     return $date;
   }
