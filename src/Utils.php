@@ -135,6 +135,10 @@ abstract class Utils {
   /**
    * Calculate the subscription start date for a recurring line item.
    *
+   * Stripe has no direct support for recurring dates calculated from the end
+   * of a month (negative day_of_month values). As a workaround we require them
+   * to start in a 31-day month.
+   *
    * @param \PaymentLineItem $line_item
    *   A recurring line item.
    * @param \DateTimeImmutable $now
@@ -186,7 +190,8 @@ abstract class Utils {
       }
     };
     $increment = $find_increment($recurrence);
-    while ($date < $earliest) {
+    // Payments with negative day of months must start in 31-day months.
+    while ($date < $earliest || ($offset_days && $date->modify('-1 day')->format('d') != 31)) {
       $date = $date->modify("$increment");
     }
     if ($offset_days) {

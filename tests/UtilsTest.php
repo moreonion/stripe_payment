@@ -117,18 +117,19 @@ class UtilsTest extends DrupalUnitTestCase {
    * Test getting start date with end of month payments.
    */
   public function testGetStartEndOfMonth() {
+    // We only allow start dates in 31-day months.
     $now = new \DateTimeImmutable('2019-09-15');
     $line_item = $this->lineItemStub([], [
       'interval_unit' => 'monthly',
       'day_of_month' => '-1',
     ]);
     $date = Utils::getStartDate($line_item, $now);
-    $this->assertEqual('2019-09-30', $date->format('Y-m-d'));
+    $this->assertEqual('2019-10-31', $date->format('Y-m-d'));
 
     // Tricky value as there is a Feb 29.
     $now = new \DateTimeImmutable('2020-02-15');
     $date = Utils::getStartDate($line_item, $now);
-    $this->assertEqual('2020-02-29', $date->format('Y-m-d'));
+    $this->assertEqual('2020-03-31', $date->format('Y-m-d'));
   }
 
 }
