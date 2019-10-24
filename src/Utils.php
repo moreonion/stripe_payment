@@ -159,8 +159,8 @@ abstract class Utils {
     if (!empty($recurrence->start_date) && $recurrence->start_date > $earliest) {
       $earliest = $recurrence->start_date;
     }
-    // Deal with negative day_of_month values.
     $day_of_month = $recurrence->day_of_month ?? NULL;
+    // Deal with negative day_of_month values.
     $offset_days = NULL;
     if ($day_of_month < 0) {
       // If we are calculating from the month’s end we use the next month’s 1st
@@ -170,43 +170,25 @@ abstract class Utils {
       $day_of_month = 1;
       $earliest = $earliest->modify("+$offset_days day");
     }
-    // Date in the past meeting day of month and month requirements.
-    $y = $earliest->format('Y');
-    $m = $recurrence->month ?? $earliest->format('m');
-    $d = $day_of_month ?? $earliest->format('d');
-    $start_date = $now->setDate($y, $m, $d);
-    // Find the first matching date after the earliest.
-    $find_increment = function ($recurrence) {
-      switch ($recurrence->interval_unit) {
-        case 'weekly':
-          return '1 day';
-        case 'monthly':
-          if (!empty($recurrence->month) && !empty($value = $recurrence->interval_value) && 12 % $value == 0) {
-            return "$value month";
-          }
-          return '1 month';
-        case 'yearly':
-          return !empty($recurrence->month) ? '1 year' : '1 month';
-      }
-    };
-    $increment = $find_increment($recurrence);
-    // Payments with negative day of months must start in 31-day months.
-    // Search backward:
-    $matched_date = NULL;
-    $date = $start_date;
-    while ($date > $earliest) {
-      if (!$offset_days || $date->modify('-1 day')->format('d') == 31) {
-        $matched_date = $date;
-      }
-      $date = $date->modify("-$increment");
+    if (in_array($recurrence->interval_unit, ['monthly', 'yearly'])) {
+      $month = $recurrence->month ?? NULL;
+      $interval = $recurrence->interval_unit == 'yearly' ? 12 : $recurrence->interval_value ?? 1;
+      $meets_constraints = function ($date) use ($day_of_month, $month, $offset_days, $interval) {
+        return (!$day_of_month || $date->format('d') == $day_of_month)
+          && (!$month || $date->format('m') % $interval == $month % $interval)
+          && (!$offset_days || $date->modify('-1 day')->format('d') == 31);
+      };
     }
-    if ($matched_date) {
-      return $offset_days ? $matched_date->modify("-$offset_days day") : $matched_date;
+    else {
+      $meets_constraints = function ($date) {
+        return TRUE;
+      };
     }
-    // Search fowrard:
-    $date = $start_date;
-    while ($date < $earliest || ($offset_days && $date->modify('-1 day')->format('d') != 31)) {
-      $date = $date->modify("$increment");
+    // Start at the earliest possible date and look for one date matching all
+    // the constraints.
+    $date = $earliest;
+    while (!$meets_constraints($date)) {
+      $date = $date->modify('+1 day');
     }
     return $offset_days ? $date->modify("-$offset_days day") : $date;
   }
