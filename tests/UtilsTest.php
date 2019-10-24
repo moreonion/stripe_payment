@@ -135,7 +135,7 @@ class UtilsTest extends DrupalUnitTestCase {
   /**
    * Test a start date late in the month.
    */
-  public function testPassingFebrurary() {
+  public function testGetStartDatePassingFebrurary() {
     $now = new \DateTimeImmutable('2019-09-23 14:50:58.000000');
     $line_item = $this->lineItemStub([], [
       'interval_unit' => 'monthly',
@@ -151,6 +151,54 @@ class UtilsTest extends DrupalUnitTestCase {
     ]);
     $date = Utils::getStartDate($line_item, $now);
     $this->assertEqual('2020-02-29', $date->format('Y-m-d'));
+  }
+
+  /**
+   * Test creating a subscription from a payment.
+   */
+  public function testGenerateSubscriptions() {
+    $start_date = (new \DateTimeImmutable('', new \DateTimeZone('UTC')))->modify('+10 day');
+    $payment = new \Payment([
+      'description' => 'test payment',
+      'currency_code' => 'EUR',
+    ]);
+    $payment->setLineItem(new \PaymentLineItem([
+      'name' => 'item1',
+      'description' => 'Item 1 test',
+      'amount' => 3,
+      'quantity' => 5,
+      'recurrence' => (object) [
+        'interval_unit' => 'monthly',
+        'interval_value' => 1,
+        'start_date' => $start_date,
+      ],
+    ]));
+    $options = Utils::generateSubscriptions($payment);
+    $this->assertEqual([[
+      'subscription'=> [
+        'off_session' => TRUE,
+        'payment_behavior' => 'error_if_incomplete',
+        'prorate' => FALSE,
+        'billing_cycle_anchor' => $start_date->getTimeStamp(),
+        'items' => [[
+          'plan' => '1-monthly-item1-EUR',
+          'quantity' => 15,
+        ]],
+      ],
+      'plan' => [
+        'id' => '1-monthly-item1-EUR',
+        'amount' => 100,
+        'currency' => 'EUR',
+        'interval' => 'month',
+        'interval_count' => 1,
+        'nickname' => '1 monthly Item 1 test in EUR',
+        'product' => 'item1',
+      ],
+      'product' => [
+        'id' => 'item1',
+        'name' => 'Item 1 test',
+      ],
+    ]], $options);
   }
 
 }
