@@ -88,18 +88,7 @@ class UtilsTest extends DrupalUnitTestCase {
       'month' => '9',
     ]);
     $date = Utils::getStartDate($line_item, $now);
-    $this->assertEquals($date->format('Y-m-d'), '2019-12-01');
-
-    // Start date + day of month + far away month + interval value:
-    $line_item = $this->lineItemStub([], [
-      'interval_unit' => 'monthly',
-      'interval_value' => '3',
-      'start_date' => new \DateTime('2020-01-10'),
-      'day_of_month' => '1',
-      'month' => '9',
-    ]);
-    $date = Utils::getStartDate($line_item, $now);
-    $this->assertEquals($date->format('Y-m-d'), '2020-03-01');
+    $this->assertEqual('2019-12-01', $date->format('Y-m-d'));
 
     // Weekly: everything but start date shouldn't matter.
     $line_item = $this->lineItemStub([], [
@@ -151,6 +140,53 @@ class UtilsTest extends DrupalUnitTestCase {
     ]);
     $date = Utils::getStartDate($line_item, $now);
     $this->assertEqual('2020-02-29', $date->format('Y-m-d'));
+  }
+
+  /**
+   * Test a calculating the start date with constraint on September 31st.
+   */
+  public function testGetStartDateSep31() {
+    $this->expectException(\UnexpectedValueException::class);
+    $now = new \DateTimeImmutable('2020-02-15');
+    $line_item = $this->lineItemStub([], [
+      'interval_unit' => 'yearly',
+      'day_of_month' => '31',
+      'month' => '9',
+    ]);
+    $date = Utils::getStartDate($line_item, $now);
+    $this->assertEqual('2020-09-30', $date->format('Y-m-d'));
+  }
+
+  /**
+   * Test a calculating the start date with constraint on September 31st.
+   */
+  public function testGetStartDateFeb31() {
+    $this->expectException(\UnexpectedValueException::class);
+    $now = new \DateTimeImmutable('2019-09-15');
+    $line_item = $this->lineItemStub([], [
+      'interval_unit' => 'yearly',
+      'day_of_month' => '31',
+      'month' => '2',
+    ]);
+    $date = Utils::getStartDate($line_item, $now);
+    $this->assertEqual('2020-02-29', $date->format('Y-m-d'));
+  }
+
+  /**
+   * Test complex combination.
+   */
+  public function testGetStartDateFarAwayStartDate() {
+    $this->expectException(\UnexpectedValueException::class);
+    $now = new \DateTimeImmutable('2019-09-15');
+    $line_item = $this->lineItemStub([], [
+      'interval_unit' => 'monthly',
+      'interval_value' => '3',
+      'start_date' => new \DateTime('2020-01-10'),
+      'day_of_month' => '1',
+      'month' => '9',
+    ]);
+    $date = Utils::getStartDate($line_item, $now);
+    $this->assertEqual('2020-03-01', $date->format('Y-m-d'));
   }
 
   /**

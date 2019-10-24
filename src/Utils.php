@@ -154,6 +154,9 @@ abstract class Utils {
       return NULL;
     }
     $now = $now ?? new \DateTimeImmutable('', new \DateTimeZone('UTC'));
+    $interval_unit = rtrim($recurrence->interval_unit, 'ly');
+    $interval_value = $recurrence->interval_value ?? 1;
+    $threshold = $now->modify("+$interval_value $interval_unit");
     // Earliest possible date, either tomorrow or future recurrence start date.
     $earliest = max($now->modify('+1 day'), $recurrence->start_date ?? NULL);
     $day_of_month = $recurrence->day_of_month ?? NULL;
@@ -167,9 +170,9 @@ abstract class Utils {
       $day_of_month = 1;
       $earliest = $earliest->modify("+$offset_days day");
     }
-    if (in_array($recurrence->interval_unit, ['monthly', 'yearly'])) {
+    if (in_array($interval_unit, ['month', 'year'])) {
       $month = $recurrence->month ?? NULL;
-      $interval = $recurrence->interval_unit == 'yearly' ? 12 : $recurrence->interval_value ?? 1;
+      $interval = $interval_unit == 'year' ? 12 : $interval_value ?? 1;
       $meets_constraints = function ($date) use ($day_of_month, $month, $interval) {
         return (!$day_of_month || $date->format('d') == $day_of_month)
           && (!$month || $date->format('m') % $interval == $month % $interval);
@@ -185,6 +188,9 @@ abstract class Utils {
     $date = $earliest;
     while (!$meets_constraints($date)) {
       $date = $date->modify('+1 day');
+      if ($date > $threshold) {
+        throw new \UnexpectedValueException('Unable to find a suitable start date for the given constraints.');
+      }
     }
     return $offset_days ? $date->modify("-$offset_days day") : $date;
   }
