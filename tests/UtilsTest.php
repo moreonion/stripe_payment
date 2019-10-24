@@ -132,4 +132,25 @@ class UtilsTest extends DrupalUnitTestCase {
     $this->assertEqual('2020-03-31', $date->format('Y-m-d'));
   }
 
+  /**
+   * Test a start date late in the month.
+   */
+  public function testPassingFebrurary() {
+    $now = new \DateTimeImmutable('2019-09-23 14:50:58.000000');
+    $line_item = $this->lineItemStub([], [
+      'interval_unit' => 'monthly',
+      'start_date' => new \DateTime('2019-10-30 00:00:00.000000'),
+    ]);
+    $date = Utils::getStartDate($line_item, $now);
+    $this->assertEqual('2019-10-30', $date->format('Y-m-d'));
+
+    $now = new \DateTimeImmutable('2020-02-10');
+    $line_item = $this->lineItemStub([], [
+      'interval_unit' => 'monthly',
+      'start_date' => new \DateTime('2020-02-29'),
+    ]);
+    $date = Utils::getStartDate($line_item, $now);
+    $this->assertEqual('2020-02-29', $date->format('Y-m-d'));
+  }
+
 }

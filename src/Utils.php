@@ -171,10 +171,10 @@ abstract class Utils {
       $earliest = $earliest->modify("+$offset_days day");
     }
     // Date in the past meeting day of month and month requirements.
-    $y = $earliest->format('Y') - 1;
+    $y = $earliest->format('Y');
     $m = $recurrence->month ?? $earliest->format('m');
     $d = $day_of_month ?? $earliest->format('d');
-    $date = $now->setDate($y, $m, $d);
+    $start_date = $now->setDate($y, $m, $d);
     // Find the first matching date after the earliest.
     $find_increment = function ($recurrence) {
       switch ($recurrence->interval_unit) {
@@ -191,13 +191,24 @@ abstract class Utils {
     };
     $increment = $find_increment($recurrence);
     // Payments with negative day of months must start in 31-day months.
+    // Search backward:
+    $matched_date = NULL;
+    $date = $start_date;
+    while ($date > $earliest) {
+      if (!$offset_days || $date->modify('-1 day')->format('d') == 31) {
+        $matched_date = $date;
+      }
+      $date = $date->modify("-$increment");
+    }
+    if ($matched_date) {
+      return $offset_days ? $matched_date->modify("-$offset_days day") : $matched_date;
+    }
+    // Search fowrard:
+    $date = $start_date;
     while ($date < $earliest || ($offset_days && $date->modify('-1 day')->format('d') != 31)) {
       $date = $date->modify("$increment");
     }
-    if ($offset_days) {
-      $date = $date->modify("-$offset_days day");
-    }
-    return $date;
+    return $offset_days ? $date->modify("-$offset_days day") : $date;
   }
 
 }
