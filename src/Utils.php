@@ -155,10 +155,7 @@ abstract class Utils {
     }
     $now = $now ?? new \DateTimeImmutable('', new \DateTimeZone('UTC'));
     // Earliest possible date, either tomorrow or future recurrence start date.
-    $earliest = $now->modify('+1 day');
-    if (!empty($recurrence->start_date) && $recurrence->start_date > $earliest) {
-      $earliest = $recurrence->start_date;
-    }
+    $earliest = max($now->modify('+1 day'), $recurrence->start_date ?? NULL);
     $day_of_month = $recurrence->day_of_month ?? NULL;
     // Deal with negative day_of_month values.
     $offset_days = NULL;
