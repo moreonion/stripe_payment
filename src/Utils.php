@@ -175,7 +175,7 @@ abstract class Utils {
       $month = $recurrence->month ?? NULL;
       $interval = $interval_unit == 'year' ? 12 : $interval_value ?? 1;
       $meets_constraints = function (\DateTimeImmutable $date) use ($day_of_month, $month, $interval) {
-        return (!$day_of_month || $date->format('d') == $day_of_month)
+        return (!$day_of_month || $date->format('d') == $day_of_month || ($date->modify('+1 day')->format('d') == 1 && $date->format('d') < $day_of_month))
           && (!$month || $date->format('m') % $interval == $month % $interval);
       };
     }

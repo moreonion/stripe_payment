@@ -146,7 +146,6 @@ class UtilsTest extends DrupalUnitTestCase {
    * Test a calculating the start date with constraint on September 31st.
    */
   public function testGetStartDateSep31() {
-    $this->expectException(\UnexpectedValueException::class);
     $now = new \DateTimeImmutable('2020-02-15');
     $line_item = $this->lineItemStub([], [
       'interval_unit' => 'yearly',
@@ -161,7 +160,6 @@ class UtilsTest extends DrupalUnitTestCase {
    * Test a calculating the start date with constraint on September 31st.
    */
   public function testGetStartDateFeb31() {
-    $this->expectException(\UnexpectedValueException::class);
     $now = new \DateTimeImmutable('2019-09-15');
     $line_item = $this->lineItemStub([], [
       'interval_unit' => 'yearly',
