@@ -170,10 +170,9 @@ abstract class Utils {
     if (in_array($recurrence->interval_unit, ['monthly', 'yearly'])) {
       $month = $recurrence->month ?? NULL;
       $interval = $recurrence->interval_unit == 'yearly' ? 12 : $recurrence->interval_value ?? 1;
-      $meets_constraints = function ($date) use ($day_of_month, $month, $offset_days, $interval) {
+      $meets_constraints = function ($date) use ($day_of_month, $month, $interval) {
         return (!$day_of_month || $date->format('d') == $day_of_month)
-          && (!$month || $date->format('m') % $interval == $month % $interval)
-          && (!$offset_days || $date->modify('-1 day')->format('d') == 31);
+          && (!$month || $date->format('m') % $interval == $month % $interval);
       };
     }
     else {
