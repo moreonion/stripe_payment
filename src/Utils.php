@@ -159,6 +159,7 @@ abstract class Utils {
     $threshold = $now->modify("+$interval_value $interval_unit");
     // Earliest possible date, either tomorrow or future recurrence start date.
     $earliest = max($now->modify('+1 day'), $recurrence->start_date ?? NULL);
+    $earliest = $earliest instanceof \DateTime ? \DateTimeImmutable::createFromMutable($earliest) : $earliest;
     $day_of_month = $recurrence->day_of_month ?? NULL;
     // Deal with negative day_of_month values.
     $offset_days = NULL;
@@ -173,13 +174,13 @@ abstract class Utils {
     if (in_array($interval_unit, ['month', 'year'])) {
       $month = $recurrence->month ?? NULL;
       $interval = $interval_unit == 'year' ? 12 : $interval_value ?? 1;
-      $meets_constraints = function ($date) use ($day_of_month, $month, $interval) {
+      $meets_constraints = function (\DateTimeImmutable $date) use ($day_of_month, $month, $interval) {
         return (!$day_of_month || $date->format('d') == $day_of_month)
           && (!$month || $date->format('m') % $interval == $month % $interval);
       };
     }
     else {
-      $meets_constraints = function ($date) {
+      $meets_constraints = function (\DateTimeImmutable $date) {
         return TRUE;
       };
     }
