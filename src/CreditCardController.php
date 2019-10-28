@@ -125,9 +125,15 @@ class CreditCardController extends \PaymentMethodController implements PaymentRe
             ])->execute();
         }
       }
+      catch (\UnexpectedValueException $e) {
+        watchdog_exception('stripe_payment', $e, 'Impossible recurrence constraints.', [], WATCHDOG_ERROR);
+        $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
+        entity_save('payment', $payment);
+        return FALSE;
+      }
       catch (ApiErrorException $e) {
         $message = 'Stripe API error for recurrent payment (pmid: @pmid). @description.';
-        $variables = ['@description' => $e->getMessage(), '@pmid' => $method->pmid];
+        $variables = ['@description' => $e->getMessage(), '@pmid' => $payment->method->pmid];
         watchdog('stripe_payment', $message, $variables, WATCHDOG_WARNING);
         $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
         entity_save('payment', $payment);

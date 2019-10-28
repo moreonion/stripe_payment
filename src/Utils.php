@@ -135,32 +135,65 @@ abstract class Utils {
   /**
    * Calculate the subscription start date for a recurring line item.
    *
+   * Stripe has no direct support for recurring dates calculated from the end
+   * of a month (negative day_of_month values). As a workaround we require them
+   * to start in a 31-day month.
+   *
    * @param \PaymentLineItem $line_item
    *   A recurring line item.
+   * @param \DateTimeImmutable $now
+   *   The date and time considered to be now, defaults to now in UTC.
    *
    * @return \DateTime|null
    *   The calculated start date or
    *   `null` if the line item doesn’t include any date settings.
    */
-  public static function getStartDate(\PaymentLineItem $line_item) {
+  public static function getStartDate(\PaymentLineItem $line_item, \DateTimeImmutable $now = NULL) {
     $recurrence = $line_item->recurrence;
     if (empty($recurrence->start_date) && empty($recurrence->month) && empty($recurrence->day_of_month)) {
       return NULL;
     }
-    // Earliest possible start date.
-    $earliest = $recurrence->start_date ?? new \DateTime('tomorrow', new \DateTimeZone('UTC'));
-    // Date meeting day of month and month requirements.
-    $y = $earliest->format('Y');
-    $m = $recurrence->month ?? $earliest->format('m');
-    $d = $recurrence->day_of_month ?? $earliest->format('d');
-    $date = new \DateTime($y . $m . $d, new \DateTimeZone('UTC'));
-    // Find the first matching date after the earliest.
-    $unit = rtrim($recurrence->interval_unit, 'ly');
-    $count = $recurrence->interval_value ?? 1;
-    while ($date < $earliest) {
-      $date->modify("$count $unit");
+    $now = $now ?? new \DateTimeImmutable('', new \DateTimeZone('UTC'));
+    $interval_unit = rtrim($recurrence->interval_unit, 'ly');
+    $interval_value = $recurrence->interval_value ?? 1;
+    $threshold = $now->modify("+$interval_value $interval_unit");
+    // Earliest possible date, either tomorrow or future recurrence start date.
+    $earliest = max($now->modify('+1 day'), $recurrence->start_date ?? NULL);
+    $earliest = $earliest instanceof \DateTime ? \DateTimeImmutable::createFromMutable($earliest) : $earliest;
+    $day_of_month = $recurrence->day_of_month ?? NULL;
+    // Deal with negative day_of_month values.
+    $offset_days = NULL;
+    if ($day_of_month < 0) {
+      // If we are calculating from the month’s end we use the next month’s 1st
+      // instead and then add the difference as buffer to earliest so we can
+      // subtract it from the result in the end.
+      $offset_days = abs($day_of_month);
+      $day_of_month = 1;
+      $earliest = $earliest->modify("+$offset_days day");
     }
-    return $date;
+    if (in_array($interval_unit, ['month', 'year'])) {
+      $month = $recurrence->month ?? NULL;
+      $interval = $interval_unit == 'year' ? 12 : $interval_value ?? 1;
+      $meets_constraints = function (\DateTimeImmutable $date) use ($day_of_month, $month, $interval) {
+        return (!$day_of_month || $date->format('d') == $day_of_month || ($date->modify('+1 day')->format('d') == 1 && $date->format('d') < $day_of_month))
+          && (!$month || $date->format('m') % $interval == $month % $interval);
+      };
+    }
+    else {
+      $meets_constraints = function (\DateTimeImmutable $date) {
+        return TRUE;
+      };
+    }
+    // Start at the earliest possible date and look for one date matching all
+    // the constraints.
+    $date = $earliest;
+    while (!$meets_constraints($date)) {
+      $date = $date->modify('+1 day');
+      if ($date > $threshold) {
+        throw new \UnexpectedValueException('Unable to find a suitable start date for the given constraints.');
+      }
+    }
+    return $offset_days ? $date->modify("-$offset_days day") : $date;
   }
 
 }
