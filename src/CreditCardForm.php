@@ -32,7 +32,7 @@ class CreditCardForm extends _CreditCardForm {
       'client_secret' => $intent->client_secret,
       'intent_type' => $intent->object,
       'pmid' => $method->pmid,
-      'css_src' => variable_get('stripe_payment_css_src', []),
+      'font_src' => variable_get('stripe_payment_font_src', []),
     ];
     $form['#attached']['js'][] = [
       'type' => 'setting',

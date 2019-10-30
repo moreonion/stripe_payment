@@ -87,16 +87,14 @@ class MethodElement {
   }
 
   /**
-   * Read any cssSrc includes for font loading from the settings.
+   * Read font sources from the settings.
    *
-   * If the item is a string, we assume it is a URL to a CSS with font-face
-   * declarations.
-   * The Stripe JS expects this to be in an object with the key `cssSrc`.
-   * If the item is an object itself, we just use it -- Stripe does support
-   * another option to declare font-faces as well.
+   * If the item is an object, we just pass it on.
+   * If it is a string, we assume it is a URL to a CSS with font-face
+   * declarations and wrap it in a new settings object for Stripe JS.
    */
-  getCssSrc () {
-    return this.settings.css_src.map((item) => {
+  getFontSrc () {
+    return this.settings.font_src.map((item) => {
       if (typeof item === 'string') {
         return { cssSrc: item }
       }
@@ -110,7 +108,7 @@ class MethodElement {
    * Initialize empty containers with Stripe elements (iframes for form input).
    */
   initElements () {
-    const elements = this.stripe.elements({ locale: document.documentElement.lang, fonts: this.getCssSrc() })
+    const elements = this.stripe.elements({ locale: document.documentElement.lang, fonts: this.getFontSrc() })
     let options = {
       style: this.getStyles(),
       classes: { invalid: 'invalid', complete: 'valid', focus: 'focus' }
