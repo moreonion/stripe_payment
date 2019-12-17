@@ -189,7 +189,7 @@ function stripe_payment_webhook($method) {
 /**
  * Implements hook_form_FORM_ID_alter().
  */
-function stripe_payment_form_payment_form_payment_method_alter(&$form, $form_state, $form_id) {
+function stripe_payment_form_payment_form_payment_method_alter(&$form, &$form_state) {
   if ($form_state['payment_method']->controller instanceof CreditCardController) {
     $form['#submit'][] = 'stripe_payment_method_configuration_form_submit';
   }
