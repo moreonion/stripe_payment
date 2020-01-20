@@ -153,7 +153,7 @@ class MethodElement {
   validate (submitter) {
     $('.mo-dialog-wrapper').addClass('visible')
     if (typeof Drupal.clientsideValidation !== 'undefined') {
-      $('#clientsidevalidation-' + this.form_id + '-errors ul').empty()
+      Drupal.myClientsideValidation.validators[this.form_id].resetForm()
     }
     const data = {
       payment_method_data: this.extraData(),
@@ -170,7 +170,7 @@ class MethodElement {
       this.settings.client_secret, this.cardNumberElement, data
     ).then((result) => {
       if (result.error) {
-        this.errorHandler(result.error.message)
+        this.errorHandler(result.error)
         submitter.error()
       }
       else {
@@ -185,25 +185,44 @@ class MethodElement {
    * @param {object} error - The Stripe error data.
    */
   errorHandler (error) {
-    var settings, wrapper, child
+    var $field
+    // Trigger clientside validation for respective field.
     if (typeof Drupal.clientsideValidation !== 'undefined') {
-      settings = Drupal.settings.clientsideValidation['forms'][this.form_id]
-      wrapper = document.createElement(settings.general.wrapper)
-      child = document.createElement(settings.general.errorElement)
-      child.className = settings.general.errorClass
-      child.innerHTML = error
-      wrapper.appendChild(child)
-
-      $('#clientsidevalidation-' + this.form_id + '-errors ul')
-        .append(wrapper).show()
-        .parent().show()
-    }
-    else {
-      if ($('#messages').length === 0) {
-        $('<div id="messages"><div class="section clearfix"></div></div>').insertAfter('#header')
+      const validator = Drupal.myClientsideValidation.validators[this.form_id]
+      switch (error.code) {
+        case 'incorrect_number':
+        case 'invalid_number':
+        case 'incomplete_number':
+          $field = this.$element.find('[data-stripe-element="cardNumber"]')
+          break
+        case 'incorrect_cvc':
+        case 'invalid_cvc':
+        case 'incomplete_cvc':
+          $field = this.$element.find('[data-stripe-element="cardCvc"]')
+          break
+        case 'invalid_expiry_month':
+        case 'invalid_expiry_year':
+        case 'invalid_expiry_year_past':
+        case 'incomplete_expiry':
+        case 'expired_card':
+          $field = this.$element.find('[data-stripe-element="cardExpiry"]')
+          break
       }
-      $('<div class="messages error">' + error + '</div>').appendTo('#messages .clearfix')
+      if ($field && $field.attr('name')) {
+        let errors = {}
+        errors[$field.attr('name')] = error.message
+        // Needed so jQuery validate will find the element when removing errors.
+        validator.currentElements.push($field)
+        // Trigger validation error.
+        validator.showErrors(errors)
+        return
+      }
     }
+    // No clientside validation or error is not related to a payment field.
+    if ($('#messages').length === 0) {
+      $('<div id="messages"><div class="section clearfix"></div></div>').insertAfter('#header')
+    }
+    $('<div class="messages error">' + error + '</div>').appendTo('#messages .clearfix')
   }
 }
 
