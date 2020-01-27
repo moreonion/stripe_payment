@@ -24,32 +24,7 @@ class CreditCardForm extends _CreditCardForm {
    */
   public function form(array $form, array &$form_state, \Payment $payment) {
     $form = parent::form($form, $form_state, $payment);
-    $method = &$payment->method;
-
-    $intent = Api::init($method)->createIntent($payment);
-    $settings['stripe_payment']['pmid_' . $method->pmid] = [
-      'public_key' => $method->controller_data['public_key'],
-      'client_secret' => $intent->client_secret,
-      'intent_type' => $intent->object,
-      'pmid' => $method->pmid,
-      'font_src' => variable_get('stripe_payment_font_src', []),
-    ];
-    $form['#attached']['js'][] = [
-      'type' => 'setting',
-      'data' => $settings,
-    ];
-    $form['#attached']['js']['https://js.stripe.com/v3/'] = [
-      'type' => 'external',
-      'group' => JS_LIBRARY,
-    ];
-    $form['#attached']['js'][drupal_get_path('module', 'stripe_payment') . '/stripe.min.js'] = [
-      'type' => 'file',
-    ];
-
-    // Insert stripe id field.
-    $form['stripe_id'] = [
-      '#type' => 'hidden',
-    ];
+    $form = StripeForm::form($form, $form_state, $payment);
 
     // Override payment fields.
     $form['credit_card_number'] = [
@@ -79,10 +54,6 @@ class CreditCardForm extends _CreditCardForm {
     unset($form['expiry_date']['year']);
     unset($form['issuer']);
 
-    $form['extra_data'] = [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['stripe-extra-data']],
-    ] + CustomerDataForm::form($method->controller_data['input_settings'], $payment->contextObj);
     return $form;
   }
 
@@ -97,10 +68,7 @@ class CreditCardForm extends _CreditCardForm {
    *   The payment object.
    */
   public function validate(array $element, array &$form_state, \Payment $payment) {
-    // Stripe takes care of the real validation, client-side.
-    $values = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
-    $payment->method_data['stripe_id'] = $values['stripe_id'];
-    $payment->method_data['customer'] = CustomerDataForm::getData($element);
+    StripeForm::validate($element, $form_state, $payment);
   }
 
 }

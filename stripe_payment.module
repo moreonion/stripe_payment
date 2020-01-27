@@ -6,7 +6,7 @@
  */
 
 use Drupal\stripe_payment\Api;
-use Drupal\stripe_payment\CreditCardController;
+use Drupal\stripe_payment\Utils;
 use Stripe\Event;
 use Stripe\Webhook;
 use Stripe\Exception\InvalidRequestException;
@@ -108,7 +108,7 @@ function stripe_payment_menu() {
  * Page callback for Stripe webhook.
  */
 function stripe_payment_webhook($method) {
-  if ($method->controller->name != 'stripe_payment_credit_card') {
+  if (!Utils::isStripeMethod($method)) {
     $message = "Received Stripe event for wrong payment method \"@method\" (pmid: @pmid).";
     $variables = ['@method' => $method->controller->name, '@pmid' => $method->pmid];
     watchdog('stripe_payment', $message, $variables, WATCHDOG_ERROR);
@@ -190,7 +190,7 @@ function stripe_payment_webhook($method) {
  * Implements hook_form_FORM_ID_alter().
  */
 function stripe_payment_form_payment_form_payment_method_alter(&$form, &$form_state) {
-  if ($form_state['payment_method']->controller instanceof CreditCardController) {
+  if (Utils::isStripeMethod($form_state['payment_method'])) {
     $form['#submit'][] = 'stripe_payment_method_configuration_form_submit';
   }
 }
@@ -240,7 +240,7 @@ function stripe_payment_entity_load(array $entities, $entity_type) {
  * Implements hook_payment_method_delete().
  */
 function stripe_payment_payment_method_delete(\PaymentMethod $method) {
-  if ($method->controller instanceof CreditCardController) {
+  if (Utils::isStripeMethod($method)) {
     if (!empty($method->controller_data['webhook_id'])) {
       $api = Api::init($method);
       try {
@@ -266,7 +266,7 @@ function stripe_payment_payment_method_delete(\PaymentMethod $method) {
  * Implements hook_payment_insert().
  */
 function stripe_payment_payment_insert(\Payment $payment) {
-  if ($payment->method->controller instanceof CreditCardController) {
+  if (Utils::isStripeMethod($payment->method)) {
     if (!empty($payment->stripe)) {
       $data = $payment->stripe;
       $data['pid'] = $payment->pid;
@@ -279,7 +279,7 @@ function stripe_payment_payment_insert(\Payment $payment) {
  * Implements hook_payment_update().
  */
 function stripe_payment_payment_update(\Payment $payment) {
-  if ($payment->method->controller instanceof CreditCardController) {
+  if (Utils::isStripeMethod($payment->method)) {
     if (!empty($payment->stripe)) {
       $data = $payment->stripe;
       $update = db_merge('stripe_payment')

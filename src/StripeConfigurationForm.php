@@ -10,7 +10,7 @@ use Stripe\Exception\ApiErrorException;
 /**
  * Configuration form for the Stripe payment method controller.
  */
-class CreditCardConfigurationForm implements MethodFormInterface {
+class StripeConfigurationForm implements MethodFormInterface {
 
   /**
    * Add form elements to the configuration form.
