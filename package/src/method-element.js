@@ -152,6 +152,7 @@ class MethodElement {
    */
   validate (submitter) {
     $('.mo-dialog-wrapper').addClass('visible')
+    $('.stripe-error').remove()
     if (typeof Drupal.clientsideValidation !== 'undefined') {
       Drupal.myClientsideValidation.validators[this.form_id].resetForm()
     }
@@ -185,10 +186,10 @@ class MethodElement {
    * @param {object} error - The Stripe error data.
    */
   errorHandler (error) {
-    var $field
     // Trigger clientside validation for respective field.
     if (typeof Drupal.clientsideValidation !== 'undefined') {
       const validator = Drupal.myClientsideValidation.validators[this.form_id]
+      let $field
       switch (error.code) {
         case 'incorrect_number':
         case 'invalid_number':
@@ -215,14 +216,30 @@ class MethodElement {
         validator.currentElements.push($field)
         // Trigger validation error.
         validator.showErrors(errors)
-        return
+      }
+      else {
+        // The error is not related to a payment field, reconstruct error markup.
+        const settings = Drupal.settings.clientsideValidation.forms[this.form_id].general
+        const $message = $(`<${settings.errorElement} class="${settings.errorClass}">`).text(error.message)
+        const $wrapper = $('#clientsidevalidation-' + this.form_id + '-errors')
+        // Add message to clientside validation wrapper if there is one.
+        if ($wrapper.length) {
+          const $list = $wrapper.find('ul')
+          $message.wrap(`<${settings.wrapper}>`).parent().addClass('stripe-error').appendTo($list)
+          $list.show()
+          $wrapper.show()
+        }
+        // Show message above the payment fieldset in want of a better place.
+        else {
+          $message.addClass('stripe-error').insertBefore(this.$element)
+        }
       }
     }
-    // No clientside validation or error is not related to a payment field.
-    if ($('#messages').length === 0) {
-      $('<div id="messages"><div class="section clearfix"></div></div>').insertAfter('#header')
+    // Without clientside validation render a message above the form.
+    else {
+      const $message = $('<div class="messages error">').text(error.message)
+      $message.addClass('stripe-error').insertBefore(this.$element.closest('form'))
     }
-    $('<div class="messages error">' + error + '</div>').appendTo('#messages .clearfix')
   }
 }
 
