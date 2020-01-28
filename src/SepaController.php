@@ -5,15 +5,15 @@ namespace Drupal\stripe_payment;
 /**
  * Payment method controller for stripe credit card payments.
  */
-class CreditCardController extends StripeController {
+class SepaController extends StripeController {
 
   /**
    * Create a new controller instance.
    */
   public function __construct() {
-    $this->title = t('Stripe Credit Card');
+    $this->title = t('Stripe SEPA');
     $this->intentSettings = [
-      'payment_method_types' => ['card']
+      'payment_method_types' => ['sepa_debit'],
     ];
     parent::__construct();
   }
@@ -21,11 +21,11 @@ class CreditCardController extends StripeController {
   /**
    * Get a payment form.
    *
-   * @return CreditCardForm
+   * @return SepaForm
    *   A new credit card form.
    */
   public function paymentForm() {
-    return new CreditCardForm();
+    return new SepaForm();
   }
 
 }

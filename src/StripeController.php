@@ -18,6 +18,8 @@ class StripeController extends \PaymentMethodController implements PaymentRecurr
     'enable_recurrent_payments' => 1,
   ];
 
+  public $intentSettings = [];
+
   /**
    * Create a new controller instance.
    */

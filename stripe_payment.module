@@ -62,6 +62,7 @@ function stripe_payment_theme() {
 function stripe_payment_payment_method_controller_info() {
   return array(
     'stripe_payment_credit_card' => '\Drupal\stripe_payment\CreditCardController',
+    'stripe_payment_sepa' => '\Drupal\stripe_payment\SepaController',
   );
 }
 

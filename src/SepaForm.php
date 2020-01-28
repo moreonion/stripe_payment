@@ -2,15 +2,15 @@
 
 namespace Drupal\stripe_payment;
 
-use Drupal\payment_forms\CreditCardForm as _CreditCardForm;
+use Drupal\payment_forms\AccountForm;
 
 /**
- * Stripe credit card form.
+ * Stripe SEPA form.
  */
-class CreditCardForm extends _CreditCardForm {
+class SepaForm extends AccountForm {
 
   /**
-   * Add form elements for Stripe credit card payments.
+   * Add form elements for Stripe SEPA payments.
    *
    * @param array $form
    *   The Drupal form array.
@@ -28,32 +28,17 @@ class CreditCardForm extends _CreditCardForm {
     $form = $stripe_form->form($form, $form_state, $payment);
 
     // Override payment fields.
-    $form['credit_card_number'] = [
+    $form['iban'] = [
       '#type' => 'stripe_payment_field',
-      '#field_name' => 'cardNumber',
+      '#field_name' => 'iban',
       '#attributes' => [
-        'class' => ['cc-number'],
+        'class' => ['iban'],
       ],
-    ] + $form['credit_card_number'];
-    $form['secure_code'] = [
-      '#type' => 'stripe_payment_field',
-      '#field_name' => 'cardCvc',
-      '#attributes' => [
-        'class' => ['cc-cvv'],
-      ],
-    ] + $form['secure_code'];
-    $form['expiry_date'] = [
-      '#type' => 'stripe_payment_field',
-      '#field_name' => 'cardExpiry',
-      '#attributes' => [
-        'class' => ['cc-expiry'],
-      ],
-    ] + $form['expiry_date'];
+    ] + $form['ibanbic']['iban'];
 
     // Remove unused default fields.
-    unset($form['expiry_date']['month']);
-    unset($form['expiry_date']['year']);
-    unset($form['issuer']);
+    unset($form['holder']);
+    unset($form['ibanbic']);
 
     return $form;
   }
