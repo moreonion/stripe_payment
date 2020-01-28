@@ -156,18 +156,21 @@ class MethodElement {
       $('#clientsidevalidation-' + this.form_id + '-errors ul').empty()
     }
     const data = {
-      payment_method_data: this.extraData(),
+      payment_method: {
+        card: this.cardNumberElement,
+        ...this.extraData()
+      },
     }
     let intent = {
       name: 'paymentIntent',
-      handler: this.stripe.handleCardPayment
+      handler: this.stripe.confirmCardPayment
     }
     if (this.settings.intent_type === 'setup_intent') {
       intent.name = 'setupIntent'
-      intent.handler = this.stripe.handleCardSetup
+      intent.handler = this.stripe.confirmCardSetup
     }
     intent.handler(
-      this.settings.client_secret, this.cardNumberElement, data
+      this.settings.client_secret, data
     ).then((result) => {
       if (result.error) {
         this.errorHandler(result.error.message)
