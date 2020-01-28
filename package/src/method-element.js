@@ -153,7 +153,7 @@ class MethodElement {
   validate (submitter) {
     $('.mo-dialog-wrapper').addClass('visible')
     $('.stripe-error').remove()
-    if (typeof Drupal.clientsideValidation !== 'undefined') {
+    if (this.clientsideValidationEnabled()) {
       Drupal.myClientsideValidation.validators[this.form_id].resetForm()
     }
     const data = {
@@ -187,7 +187,7 @@ class MethodElement {
    */
   errorHandler (error) {
     // Trigger clientside validation for respective field.
-    if (typeof Drupal.clientsideValidation !== 'undefined') {
+    if (this.clientsideValidationEnabled()) {
       const validator = Drupal.myClientsideValidation.validators[this.form_id]
       let $field
       switch (error.code) {
@@ -240,6 +240,15 @@ class MethodElement {
       const $message = $('<div class="messages error">').text(error.message)
       $message.addClass('stripe-error').insertBefore(this.$element.closest('form'))
     }
+  }
+
+  /**
+   * Checks whether clientside validation is enabled for this form.
+   */
+  clientsideValidationEnabled () {
+    return typeof Drupal.clientsideValidation !== 'undefined' &&
+           typeof Drupal.myClientsideValidation.validators[this.form_id] !== 'undefined' &&
+           typeof Drupal.settings.clientsideValidation.forms[this.form_id] !== 'undefined'
   }
 }
 
