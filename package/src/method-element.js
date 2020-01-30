@@ -121,6 +121,24 @@ class MethodElement {
         this.cardNumberElement = element
       }
       element.mount(field)
+      if (this.clientsideValidationEnabled()) {
+        const validator = Drupal.myClientsideValidation.validators[this.form_id]
+        const $wrapper = $('#clientsidevalidation-' + this.form_id + '-errors')
+        element.on('change', (event) => {
+          if (event.error) {
+            this.errorHandler(event.error, $(field))
+          }
+          if (event.complete) {
+            // Remove error. jQuery validate does not provide a function for that.
+            const errors = validator.errorsFor(field)
+            validator.addWrapper(errors).remove()
+            // Hide container if it’s empty.
+            if ($wrapper.length && !$wrapper.find(validator.settings.errorElement).length) {
+              $wrapper.hide()
+            }
+          }
+        })
+      }
     })
   }
 
@@ -185,29 +203,30 @@ class MethodElement {
    * Display error messages.
    * @param {object} error - The Stripe error data.
    */
-  errorHandler (error) {
+  errorHandler (error, $field = null) {
     // Trigger clientside validation for respective field.
     if (this.clientsideValidationEnabled()) {
       const validator = Drupal.myClientsideValidation.validators[this.form_id]
-      let $field
-      switch (error.code) {
-        case 'incorrect_number':
-        case 'invalid_number':
-        case 'incomplete_number':
-          $field = this.$element.find('[data-stripe-element="cardNumber"]')
-          break
-        case 'incorrect_cvc':
-        case 'invalid_cvc':
-        case 'incomplete_cvc':
-          $field = this.$element.find('[data-stripe-element="cardCvc"]')
-          break
-        case 'invalid_expiry_month':
-        case 'invalid_expiry_year':
-        case 'invalid_expiry_year_past':
-        case 'incomplete_expiry':
-        case 'expired_card':
-          $field = this.$element.find('[data-stripe-element="cardExpiry"]')
-          break
+      if ($field === null) {
+        switch (error.code) {
+          case 'incorrect_number':
+          case 'invalid_number':
+          case 'incomplete_number':
+            $field = this.$element.find('[data-stripe-element="cardNumber"]')
+            break
+          case 'incorrect_cvc':
+          case 'invalid_cvc':
+          case 'incomplete_cvc':
+            $field = this.$element.find('[data-stripe-element="cardCvc"]')
+            break
+          case 'invalid_expiry_month':
+          case 'invalid_expiry_year':
+          case 'invalid_expiry_year_past':
+          case 'incomplete_expiry':
+          case 'expired_card':
+            $field = this.$element.find('[data-stripe-element="cardExpiry"]')
+            break
+        }
       }
       if ($field && $field.attr('name')) {
         let errors = {}
