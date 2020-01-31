@@ -131,6 +131,24 @@ class MethodElement {
       }
       let element = this.stripeElements.create(name, options)
       element.mount(field)
+      if (this.clientsideValidationEnabled()) {
+        const validator = Drupal.myClientsideValidation.validators[this.form_id]
+        const $wrapper = $('#clientsidevalidation-' + this.form_id + '-errors')
+        element.on('change', (event) => {
+          if (event.error) {
+            this.errorHandler(event.error, $(field))
+          }
+          if (event.complete) {
+            // Remove error. jQuery validate does not provide a function for that.
+            const errors = validator.errorsFor(field)
+            validator.addWrapper(errors).remove()
+            // Hide container if it’s empty.
+            if ($wrapper.length && !$wrapper.find(validator.settings.errorElement).length) {
+              $wrapper.hide()
+            }
+          }
+        })
+      }
     })
   }
 
@@ -185,15 +203,16 @@ class MethodElement {
    */
   validate (submitter) {
     $('.mo-dialog-wrapper').addClass('visible')
-    if (typeof Drupal.clientsideValidation !== 'undefined') {
-      $('#clientsidevalidation-' + this.form_id + '-errors ul').empty()
+    $('.stripe-error').remove()
+    if (this.clientsideValidationEnabled()) {
+      Drupal.myClientsideValidation.validators[this.form_id].resetForm()
     }
     const intent = this.intentData()
     intent.handler(
       this.settings.client_secret, intent.data
     ).then((result) => {
       if (result.error) {
-        this.errorHandler(result.error.message)
+        this.errorHandler(result.error)
         submitter.error()
       }
       else {
@@ -207,26 +226,71 @@ class MethodElement {
    * Display error messages.
    * @param {object} error - The Stripe error data.
    */
-  errorHandler (error) {
-    var settings, wrapper, child
-    if (typeof Drupal.clientsideValidation !== 'undefined') {
-      settings = Drupal.settings.clientsideValidation['forms'][this.form_id]
-      wrapper = document.createElement(settings.general.wrapper)
-      child = document.createElement(settings.general.errorElement)
-      child.className = settings.general.errorClass
-      child.innerHTML = error
-      wrapper.appendChild(child)
-
-      $('#clientsidevalidation-' + this.form_id + '-errors ul')
-        .append(wrapper).show()
-        .parent().show()
-    }
-    else {
-      if ($('#messages').length === 0) {
-        $('<div id="messages"><div class="section clearfix"></div></div>').insertAfter('#header')
+  errorHandler (error, $field = null) {
+    // Trigger clientside validation for respective field.
+    if (this.clientsideValidationEnabled()) {
+      const validator = Drupal.myClientsideValidation.validators[this.form_id]
+      if ($field === null) {
+        switch (error.code) {
+          case 'incorrect_number':
+          case 'invalid_number':
+          case 'incomplete_number':
+            $field = this.$element.find('[data-stripe-element="cardNumber"]')
+            break
+          case 'incorrect_cvc':
+          case 'invalid_cvc':
+          case 'incomplete_cvc':
+            $field = this.$element.find('[data-stripe-element="cardCvc"]')
+            break
+          case 'invalid_expiry_month':
+          case 'invalid_expiry_year':
+          case 'invalid_expiry_year_past':
+          case 'incomplete_expiry':
+          case 'expired_card':
+            $field = this.$element.find('[data-stripe-element="cardExpiry"]')
+            break
+        }
       }
-      $('<div class="messages error">' + error + '</div>').appendTo('#messages .clearfix')
+      if ($field && $field.attr('name')) {
+        let errors = {}
+        errors[$field.attr('name')] = error.message
+        // Needed so jQuery validate will find the element when removing errors.
+        validator.currentElements.push($field)
+        // Trigger validation error.
+        validator.showErrors(errors)
+      }
+      else {
+        // The error is not related to a payment field, reconstruct error markup.
+        const settings = Drupal.settings.clientsideValidation.forms[this.form_id].general
+        const $message = $(`<${settings.errorElement} class="${settings.errorClass}">`).text(error.message)
+        const $wrapper = $('#clientsidevalidation-' + this.form_id + '-errors')
+        // Add message to clientside validation wrapper if there is one.
+        if ($wrapper.length) {
+          const $list = $wrapper.find('ul')
+          $message.wrap(`<${settings.wrapper}>`).parent().addClass('stripe-error').appendTo($list)
+          $list.show()
+          $wrapper.show()
+        }
+        // Show message above the payment fieldset in want of a better place.
+        else {
+          $message.addClass('stripe-error').insertBefore(this.$element)
+        }
+      }
     }
+    // Without clientside validation render a message above the form.
+    else {
+      const $message = $('<div class="messages error">').text(error.message)
+      $message.addClass('stripe-error').insertBefore(this.$element.closest('form'))
+    }
+  }
+
+  /**
+   * Checks whether clientside validation is enabled for this form.
+   */
+  clientsideValidationEnabled () {
+    return typeof Drupal.clientsideValidation !== 'undefined' &&
+           typeof Drupal.myClientsideValidation.validators[this.form_id] !== 'undefined' &&
+           typeof Drupal.settings.clientsideValidation.forms[this.form_id] !== 'undefined'
   }
 }
 
