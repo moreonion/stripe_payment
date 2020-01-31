@@ -126,6 +126,8 @@ class MethodElement {
       // Extra options for IBAN field:
       if (name === 'iban') {
         options['supportedCountries'] = ['SEPA']
+        const $country = this.$element.find('[data-stripe="billing_details.address.country"]')
+        options['placeholderCountry'] = $country.val() || 'DE'
       }
       let element = this.stripeElements.create(name, options)
       element.mount(field)
