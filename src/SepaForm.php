@@ -33,6 +33,7 @@ class SepaForm extends AccountForm {
       '#field_name' => 'iban',
       '#attributes' => [
         'class' => ['iban'],
+        'name' => 'iban',
       ],
     ] + $form['ibanbic']['iban'];
 

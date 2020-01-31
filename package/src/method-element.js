@@ -249,6 +249,11 @@ class MethodElement {
           case 'expired_card':
             $field = this.$element.find('[data-stripe-element="cardExpiry"]')
             break
+          case 'invalid_bank_account_iban':
+          case 'invalid_iban':
+          case 'incomplete_iban':
+            $field = this.$element.find('[data-stripe-element="iban"]')
+            break
         }
       }
       if ($field && $field.attr('name')) {
