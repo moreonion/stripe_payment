@@ -2,13 +2,16 @@ name = Stripe Payment methods
 description = Provides payment methods to transfer money using the payment provider www.stripe.com
 core = 7.x
 php = 5.4
+configure = admin/config/services/payment/stripe
 
+dependencies[] = drupal:filter
 dependencies[] = libraries
 dependencies[] = payment (>= 7.x-1.10)
 dependencies[] = payment_context
 dependencies[] = payment_controller_data
 dependencies[] = payment_forms (>= 7.x-2.0-beta1)
 dependencies[] = payment_recurrence
+dependencies[] = variable:variable
 dependencies[] = webform_paymethod_select
 dependencies[] = xautoload (>= 7.x-5.0)
 

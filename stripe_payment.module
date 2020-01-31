@@ -102,6 +102,14 @@ function stripe_payment_menu() {
     'type' => MENU_CALLBACK,
     'delivery callback' => 'little_helpers_deliver_json',
   ];
+  $items['admin/config/services/payment/stripe'] = [
+    'title' => 'Stripe payment settings',
+    'description' => 'Configure site-wide options for Stripe.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['variable_module_form', 'stripe_payment'],
+    'access arguments' => ['payment.payment.administer'],
+    'weight' => 10,
+  ];
   return $items;
 }
 

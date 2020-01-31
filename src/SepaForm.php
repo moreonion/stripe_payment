@@ -40,6 +40,16 @@ class SepaForm extends AccountForm {
     unset($form['holder']);
     unset($form['ibanbic']);
 
+    // Display SEPA authorization text.
+    $message = variable_get_value('stripe_payment_sepa_authorization');
+    $form['sepa_authorization'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['stripe-payment-sepa-authorization']
+      ],
+    ];
+    $form['sepa_authorization'][]['#markup'] = check_markup($message['value'], $message['format']);
+
     return $form;
   }
 
