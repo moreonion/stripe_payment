@@ -179,21 +179,20 @@ class MethodElement {
    */
   intentData () {
     const name = camelCase(this.settings.intent_type)
-    let handler = 'confirm'
     let data = { payment_method: this.extraData() }
+    let handler
     if (this.settings.intent_methods.includes('sepa_debit')) {
-      handler += 'SepaDebit'
       data.payment_method.sepa_debit = this.stripeElements.getElement('iban')
+      handler = name === 'setupIntent' ? 'confirmSepaDebitSetup' : 'confirmSepaDebitPayment'
     }
     else {
-      handler += 'Card'
       data.payment_method.card = this.stripeElements.getElement('cardNumber')
+      handler = name === 'setupIntent' ? 'confirmCardSetup' : 'confirmCardPayment'
     }
-    handler += name.replace('Intent', '').replace(/^[a-z]/g, (g) => g.toUpperCase())
     return {
       name: name,
-      handler: this.stripe[handler],
-      data: data
+      data: data,
+      handler: this.stripe[handler]
     }
   }
 
