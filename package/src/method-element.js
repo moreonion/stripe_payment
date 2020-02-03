@@ -249,6 +249,8 @@ class MethodElement {
             $field = this.$element.find('[data-stripe-element="cardExpiry"]')
             break
           case 'invalid_bank_account_iban':
+          case 'invalid_iban_country_code':
+          case 'invalid_iban_start':
           case 'invalid_iban':
           case 'incomplete_iban':
             $field = this.$element.find('[data-stripe-element="iban"]')
