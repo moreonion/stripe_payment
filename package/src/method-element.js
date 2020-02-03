@@ -183,11 +183,11 @@ class MethodElement {
     let data = { payment_method: this.extraData() }
     if (this.settings.intent_methods.includes('sepa_debit')) {
       handler += 'SepaDebit'
-      data.payment_method.sepa_debit = this.stripeElements.get('iban')
+      data.payment_method.sepa_debit = this.stripeElements.getElement('iban')
     }
     else {
       handler += 'Card'
-      data.payment_method.card = this.stripeElements.get('cardNumber')
+      data.payment_method.card = this.stripeElements.getElement('cardNumber')
     }
     handler += name.replace('Intent', '').replace(/^[a-z]/g, (g) => g.toUpperCase())
     return {
