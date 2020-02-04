@@ -204,7 +204,9 @@ class MethodElement {
     $('.mo-dialog-wrapper').addClass('visible')
     $('.stripe-error').remove()
     if (this.clientsideValidationEnabled()) {
-      Drupal.myClientsideValidation.validators[this.form_id].resetForm()
+      const $validator = Drupal.myClientsideValidation.validators[this.form_id]
+      $validator.prepareForm()
+      $validator.hideErrors()
     }
     const intent = this.intentData()
     intent.handler(
