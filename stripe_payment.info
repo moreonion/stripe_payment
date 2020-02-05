@@ -5,6 +5,7 @@ php = 5.4
 configure = admin/config/services/payment/stripe
 
 dependencies[] = drupal:filter
+dependencies[] = elements:elements (>= 7.x-1.2)
 dependencies[] = libraries
 dependencies[] = payment (>= 7.x-1.10)
 dependencies[] = payment_context

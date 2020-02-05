@@ -128,7 +128,7 @@ class CustomerDataForm {
       '#stripe_customer_field' => 'last_name',
     ];
     $fields['billing_details']['email'] = [
-      '#type' => 'textfield',
+      '#type' => 'emailfield',
       '#title' => t('Email'),
       '#stripe_field' => 'billing_details.email',
       '#stripe_customer_field' => 'email',
