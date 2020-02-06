@@ -292,7 +292,10 @@ class CustomerDataForm {
       if ($key) {
         $element['#settings'] = $parent['#settings'][$key];
       }
-      $element['#controller_required'] = !empty($element['#required']);
+      $element['#controller_required'] = !empty($element['#required']) || !empty($element['#settings']['required']);
+      if ($element['#controller_required']) {
+        $element['#attributes']['data-controller-required'] = 'required';
+      }
       unset($element['#required']);
       if (!empty($element['#stripe_field'])) {
         $element['#attributes']['data-stripe'] = $element['#stripe_field'];
