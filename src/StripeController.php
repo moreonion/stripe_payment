@@ -32,10 +32,20 @@ class StripeController extends \PaymentMethodController implements PaymentRecurr
    * Get a form for configuring the payment method.
    *
    * @return StripeConfigurationForm
-   *   A new credit card configuration form.
+   *   A new Stripe configuration form.
    */
   public function configurationForm() {
     return new StripeConfigurationForm();
+  }
+
+  /**
+   * Get a customer data form.
+   *
+   * @return CustomerDataForm
+   *   A new customer data form.
+   */
+  public function customerDataForm() {
+    return new CustomerDataForm();
   }
 
   /**

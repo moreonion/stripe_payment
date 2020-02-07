@@ -24,6 +24,7 @@ class StripeForm implements PaymentFormInterface {
    */
   public function form(array $form, array &$form_state, \Payment $payment) {
     $method = &$payment->method;
+    $customer_data_form = $method->controller->customerDataForm();
 
     $intent = Api::init($method)->createIntent($payment);
     $settings['stripe_payment']['pmid_' . $method->pmid] = [
@@ -54,7 +55,7 @@ class StripeForm implements PaymentFormInterface {
     $form['extra_data'] = [
       '#type' => 'container',
       '#attributes' => ['class' => ['stripe-extra-data']],
-    ] + CustomerDataForm::form($method->controller_data['input_settings'], $payment->contextObj);
+    ] + $customer_data_form->form($method->controller_data['input_settings'], $payment->contextObj);
     return $form;
   }
 
@@ -73,7 +74,8 @@ class StripeForm implements PaymentFormInterface {
   public function validate(array $element, array &$form_state, \Payment $payment) {
     $values = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
     $payment->method_data['stripe_id'] = $values['stripe_id'];
-    $payment->method_data['customer'] = CustomerDataForm::getData($element);
+    $customer_data_form = $payment->method->controller->customerDataForm();
+    $payment->method_data['customer'] = $customer_data_form->getData($element);
   }
 
 }

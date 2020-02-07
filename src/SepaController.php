@@ -15,22 +15,6 @@ class SepaController extends StripeController {
     $this->intentSettings = [
       'payment_method_types' => ['sepa_debit'],
     ];
-    // Stripe requires a name and an email address for SEPA payments,
-    // set default to display those fields if not already on the form.
-    $this->controller_data_defaults['input_settings'] = [
-      'billing_details' => [
-        'name' => [
-          'enabled' => 1,
-          'display' => 'ifnotset',
-          'required' => 1,
-        ],
-        'email' => [
-          'enabled' => 1,
-          'display' => 'ifnotset',
-          'required' => 1,
-        ],
-      ]
-    ];
     parent::__construct();
   }
 
@@ -38,10 +22,20 @@ class SepaController extends StripeController {
    * Get a payment form.
    *
    * @return SepaForm
-   *   A new credit card form.
+   *   A new SEPA form.
    */
   public function paymentForm() {
     return new SepaForm();
+  }
+
+  /**
+   * Get a customer data form.
+   *
+   * @return CustomerDataForm
+   *   A new customer data form.
+   */
+  public function customerDataForm() {
+    return new SepaCustomerDataForm();
   }
 
 }
