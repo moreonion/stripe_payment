@@ -28,11 +28,9 @@ class StripeForm implements PaymentFormInterface {
     $intent = Api::init($method)->createIntent($payment);
     $settings['stripe_payment']['pmid_' . $method->pmid] = [
       'public_key' => $method->controller_data['public_key'],
-      'client_secret' => $intent->client_secret,
-      'intent_type' => $intent->object,
-      'intent_methods' => $intent->payment_method_types,
       'pmid' => $method->pmid,
       'font_src' => variable_get('stripe_payment_font_src', []),
+      'intent_callback_url' => $payment->contextObj->callbackUrl($method),
     ];
     $form['#attached']['js'][] = [
       'type' => 'setting',
