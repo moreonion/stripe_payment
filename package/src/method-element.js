@@ -36,6 +36,7 @@ class MethodElement {
     this.settings = settings
     this.form_id = this.$element.closest('form').attr('id')
     this.waitForLibrariesThenInit()
+    this.intent = null
   }
 
   /**
@@ -175,13 +176,32 @@ class MethodElement {
   }
 
   /**
+   * Fetch intent data from the server.
+   */
+  async fetchIntent () {
+    const form = this.$element.closest('form').get(0)
+    const formData = new FormData()
+    formData.append('form_build_id', form['form_build_id'].value)
+    return await $.ajax({
+      type: 'POST',
+      url: this.settings.intent_callback_url,
+      data: formData,
+      processData: false,
+      contentType: false,
+    })
+  }
+
+  /**
    * Prepare data to handle each type of intent differently.
    */
-  intentData () {
-    const name = camelCase(this.settings.intent_type)
+  async intentData () {
+    if (!this.intent) {
+      this.intent = await this.fetchIntent()
+    }
+    const name = camelCase(this.intent.intent_type)
     let data = { payment_method: this.extraData() }
     let handler
-    if (this.settings.intent_methods.includes('sepa_debit')) {
+    if (this.intent.intent_methods.includes('sepa_debit')) {
       data.payment_method.sepa_debit = this.stripeElements.getElement('iban')
       handler = name === 'setupIntent' ? 'confirmSepaDebitSetup' : 'confirmSepaDebitPayment'
     }
@@ -192,7 +212,8 @@ class MethodElement {
     return {
       name: name,
       data: data,
-      handler: this.stripe[handler]
+      handler: this.stripe[handler],
+      secret: this.intent.client_secret,
     }
   }
 
@@ -200,7 +221,7 @@ class MethodElement {
    * Validate the input data.
    * @param {object} submitter - The Drupal form submitter.
    */
-  validate (submitter) {
+  async validate (submitter) {
     $('.mo-dialog-wrapper').addClass('visible')
     $('.stripe-error').remove()
     if (this.clientsideValidationEnabled()) {
@@ -208,9 +229,9 @@ class MethodElement {
       $validator.prepareForm()
       $validator.hideErrors()
     }
-    const intent = this.intentData()
+    const intent = await this.intentData()
     intent.handler(
-      this.settings.client_secret, intent.data
+      intent.secret, intent.data
     ).then((result) => {
       if (result.error) {
         this.errorHandler(result.error)

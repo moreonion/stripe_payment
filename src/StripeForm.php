@@ -25,7 +25,6 @@ class StripeForm implements PaymentFormInterface {
   public function form(array $form, array &$form_state, \Payment $payment) {
     $method = &$payment->method;
 
-    $intent = Api::init($method)->createIntent($payment);
     $settings['stripe_payment']['pmid_' . $method->pmid] = [
       'public_key' => $method->controller_data['public_key'],
       'pmid' => $method->pmid,
