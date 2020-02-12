@@ -230,18 +230,17 @@ class MethodElement {
       $validator.hideErrors()
     }
     const intent = await this.intentData()
-    intent.handler(
+    const result = await intent.handler(
       intent.secret, intent.data
-    ).then((result) => {
-      if (result.error) {
-        this.errorHandler(result.error)
-        submitter.error()
-      }
-      else {
-        this.setStripeId(result[intent.name].id)
-        submitter.ready()
-      }
-    })
+    )
+    if (result.error) {
+      this.errorHandler(result.error)
+      submitter.error()
+    }
+    else {
+      this.setStripeId(result[intent.name].id)
+      submitter.ready()
+    }
   }
 
   /**
