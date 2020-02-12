@@ -198,10 +198,10 @@ class MethodElement {
     if (!this.intent) {
       this.intent = await this.fetchIntent()
     }
-    const name = camelCase(this.intent.intent_type)
+    const name = camelCase(this.intent.type)
     let data = { payment_method: this.extraData() }
     let handler
-    if (this.intent.intent_methods.includes('sepa_debit')) {
+    if (this.intent.methods.includes('sepa_debit')) {
       data.payment_method.sepa_debit = this.stripeElements.getElement('iban')
       handler = name === 'setupIntent' ? 'confirmSepaDebitSetup' : 'confirmSepaDebitPayment'
     }

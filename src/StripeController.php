@@ -151,8 +151,8 @@ class StripeController extends \PaymentMethodController implements PaymentRecurr
     }
     return [
       'client_secret' => $intent->client_secret,
-      'intent_type' => $intent->object,
-      'intent_methods' => $intent->payment_method_types,
+      'type' => $intent->object,
+      'methods' => $intent->payment_method_types,
     ];
   }
 
