@@ -79,11 +79,11 @@ class MethodElement {
         <input type="text" class="error invalid" />
       </div>`
     ).hide().appendTo(this.$element)
-    let options = {}
+    const options = {}
     // copy base styles
     let styles = window.getComputedStyle($textField.find('input.default').get(0))
-    for (let p of properties) {
-      let styleOption = camelCase(p)
+    for (const p of properties) {
+      const styleOption = camelCase(p)
       deepSet(options, ['base', styleOption], styles.getPropertyValue(p))
     }
     // copy error color
@@ -117,20 +117,20 @@ class MethodElement {
    */
   initElements () {
     this.stripeElements = this.stripe.elements({ locale: document.documentElement.lang, fonts: this.getFontSrc() })
-    let options = {
+    const options = {
       style: this.getStyles(),
       classes: { invalid: 'invalid', complete: 'valid', focus: 'focus' }
     }
     this.$element.find('[data-stripe-element]').each((i, field) => {
-      let name = field.dataset.stripeElement
-      options['placeholder'] = name === 'cardExpiry' ? Drupal.t('MM / YY') : ''
+      const name = field.dataset.stripeElement
+      options.placeholder = name === 'cardExpiry' ? Drupal.t('MM / YY') : ''
       // Extra options for IBAN field:
       if (name === 'iban') {
-        options['supportedCountries'] = ['SEPA']
+        options.supportedCountries = ['SEPA']
         const $country = this.$element.find('[data-stripe="billing_details.address.country"]')
-        options['placeholderCountry'] = $country.val() || 'DE'
+        options.placeholderCountry = $country.val() || 'DE'
       }
-      let element = this.stripeElements.create(name, options)
+      const element = this.stripeElements.create(name, options)
       element.mount(field)
       if (this.clientsideValidationEnabled()) {
         const validator = Drupal.myClientsideValidation.validators[this.form_id]
@@ -164,10 +164,10 @@ class MethodElement {
    * Read values from extra data fields.
    */
   extraData () {
-    let data = {}
+    const data = {}
     this.$element.find('[data-stripe]').each((i, field) => {
-      let keys = field.dataset.stripe.split('.')
-      let value = $(field).val()
+      const keys = field.dataset.stripe.split('.')
+      const value = $(field).val()
       if (value) {
         deepSet(data, keys, value)
       }
@@ -178,11 +178,11 @@ class MethodElement {
   /**
    * Fetch intent data from the server.
    */
-  async fetchIntent () {
+  fetchIntent () {
     const form = this.$element.closest('form').get(0)
     const formData = new FormData()
-    formData.append('form_build_id', form['form_build_id'].value)
-    return await $.ajax({
+    formData.append('form_build_id', form.form_build_id.value)
+    return $.ajax({
       type: 'POST',
       url: this.settings.intent_callback_url,
       data: formData,
@@ -199,7 +199,7 @@ class MethodElement {
       this.intent = await this.fetchIntent()
     }
     const name = camelCase(this.intent.type)
-    let data = { payment_method: this.extraData() }
+    const data = { payment_method: this.extraData() }
     let handler
     if (this.intent.methods.includes('sepa_debit')) {
       data.payment_method.sepa_debit = this.stripeElements.getElement('iban')
@@ -280,7 +280,7 @@ class MethodElement {
         }
       }
       if ($field && $field.attr('name')) {
-        let errors = {}
+        const errors = {}
         errors[$field.attr('name')] = error.message
         // Needed so jQuery validate will find the element when removing errors.
         validator.currentElements.push($field)
