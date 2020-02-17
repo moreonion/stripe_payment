@@ -13,7 +13,7 @@ class CustomerDataForm {
   /**
    * Return default field input settings.
    */
-  public static function defaultSettings() {
+  public function defaultSettings() {
     return [
       'billing_details' => [
         'name' => [
@@ -98,11 +98,11 @@ class CustomerDataForm {
   }
 
   /**
-   * Defines stripe fields in a form-API like structure.
+   * Defines Stripe fields in a form-API like structure.
    *
    * Special #-attributes are used to denote where the data is sent to stripe.
    */
-  public static function fields() {
+  public function fields() {
     require_once DRUPAL_ROOT . '/includes/locale.inc';
     $fields = [
       '#type' => 'container',
@@ -128,7 +128,7 @@ class CustomerDataForm {
       '#stripe_customer_field' => 'last_name',
     ];
     $fields['billing_details']['email'] = [
-      '#type' => 'textfield',
+      '#type' => 'emailfield',
       '#title' => t('Email'),
       '#stripe_field' => 'billing_details.email',
       '#stripe_customer_field' => 'email',
@@ -182,7 +182,7 @@ class CustomerDataForm {
   /**
    * Get display options for a customer data field.
    */
-  public static function displayOptions($required) {
+  public function displayOptions($required) {
     $display_options = [
       'ifnotset' => t('Show field if it is not available from the context.'),
       'always' => t('Always show the field - prefill with context values.'),
@@ -196,11 +196,11 @@ class CustomerDataForm {
   /**
    * Get the input settings configuration form.
    */
-  public static function configurationForm(array $settings) {
-    ArrayConfig::mergeDefaults($settings, static::defaultSettings());
+  public function configurationForm(array $settings) {
+    ArrayConfig::mergeDefaults($settings, $this->defaultSettings());
     $form['#type'] = 'container';
     // Configuration for extra data elements.
-    $extra = CustomerDataForm::fields();
+    $extra = $this->fields();
     $extra['#settings_element'] = &$form;
     $extra['#settings_defaults'] = $settings;
     $extra['#settings_root'] = TRUE;
@@ -232,14 +232,15 @@ class CustomerDataForm {
         $fieldset['enabled'] = [
           '#type' => 'checkbox',
           '#title' => t('Enabled: Make this field available to stripe.'),
-          '#default_value' => $defaults['enabled'],
+          '#default_value' => $defaults['enabled'] || $required,
           '#id' => $enabled_id,
+          '#access' => !$required,
         ];
         $display_id = drupal_html_id('controller_data_display_' . $key);
         $fieldset['display'] = [
           '#type' => 'radios',
           '#title' => t('Display'),
-          '#options' => static::displayOptions($required),
+          '#options' => $this->displayOptions($required),
           '#default_value' => $defaults['display'],
           '#id' => $display_id,
           '#states' => ['visible' => ["#$enabled_id" => ['checked' => TRUE]]],
@@ -248,7 +249,7 @@ class CustomerDataForm {
           $fieldset['display_other'] = [
             '#type' => 'radios',
             '#title' => t('Display when other fields in the same fieldset are visible.'),
-            '#options' => static::displayOptions($required),
+            '#options' => $this->displayOptions($required),
             '#default_value' => $defaults['display_other'],
             '#states' => [
               'invisible' => ["#$display_id" => ['value' => 'always']],
@@ -282,9 +283,9 @@ class CustomerDataForm {
   /**
    * Generate the form elements for the customer data.
    */
-  public static function form(array $settings, $context) {
-    ArrayConfig::mergeDefaults($settings, static::defaultSettings());
-    $data_fieldset = CustomerDataForm::fields();
+  public function form(array $settings, $context) {
+    ArrayConfig::mergeDefaults($settings, $this->defaultSettings());
+    $data_fieldset = $this->fields();
     $data_fieldset['#settings'] = $settings;
 
     // Recursively set #settings and remove #required.
@@ -292,7 +293,10 @@ class CustomerDataForm {
       if ($key) {
         $element['#settings'] = $parent['#settings'][$key];
       }
-      $element['#controller_required'] = !empty($element['#required']);
+      $element['#controller_required'] = !empty($element['#required']) || !empty($element['#settings']['required']);
+      if ($element['#controller_required']) {
+        $element['#attributes']['data-controller-required'] = 'required';
+      }
       unset($element['#required']);
       if (!empty($element['#stripe_field'])) {
         $element['#attributes']['data-stripe'] = $element['#stripe_field'];
@@ -372,11 +376,11 @@ class CustomerDataForm {
   /**
    * Extract customer data from a submitted form element.
    */
-  public static function getData($element) {
+  public function getData($element) {
     $customer = [];
     ElementTree::applyRecursively($element, function (&$element, $key, &$parent) use (&$customer) {
       if (isset($element['#stripe_customer_field'])) {
-        static::deepSet($customer, explode('.', $element['#stripe_customer_field']), $element['#value']);
+        $this->deepSet($customer, explode('.', $element['#stripe_customer_field']), $element['#value']);
       }
     });
     if (empty($customer['address']['line1'])) {
@@ -394,11 +398,11 @@ class CustomerDataForm {
   /**
    * Helper for recursively settings values in arrays.
    */
-  protected static function deepSet(&$data, $keys, $value) {
+  protected function deepSet(&$data, $keys, $value) {
     $key = array_shift($keys);
     if ($keys) {
       $data += [$key => []];
-      static::deepSet($data[$key], $keys, $value);
+      $this->deepSet($data[$key], $keys, $value);
     }
     else {
       $data[$key] = $value;

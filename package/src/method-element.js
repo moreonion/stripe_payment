@@ -16,6 +16,13 @@ function deepSet (obj, keys, value) {
 }
 
 /**
+ * Convert kebap and snake case strings to camel case.
+ */
+function camelCase (str) {
+  return str.replace(/[-_]([a-z])/g, (g) => g[1].toUpperCase())
+}
+
+/**
  * Representing a Stripe payment method element
  */
 class MethodElement {
@@ -75,7 +82,7 @@ class MethodElement {
     // copy base styles
     let styles = window.getComputedStyle($textField.find('input.default').get(0))
     for (let p of properties) {
-      let styleOption = p.replace(/-([a-z])/g, (g) => g[1].toUpperCase())
+      let styleOption = camelCase(p)
       deepSet(options, ['base', styleOption], styles.getPropertyValue(p))
     }
     // copy error color
@@ -108,7 +115,7 @@ class MethodElement {
    * Initialize empty containers with Stripe elements (iframes for form input).
    */
   initElements () {
-    const elements = this.stripe.elements({ locale: document.documentElement.lang, fonts: this.getFontSrc() })
+    this.stripeElements = this.stripe.elements({ locale: document.documentElement.lang, fonts: this.getFontSrc() })
     let options = {
       style: this.getStyles(),
       classes: { invalid: 'invalid', complete: 'valid', focus: 'focus' }
@@ -116,10 +123,13 @@ class MethodElement {
     this.$element.find('[data-stripe-element]').each((i, field) => {
       let name = field.dataset.stripeElement
       options['placeholder'] = name === 'cardExpiry' ? Drupal.t('MM / YY') : ''
-      let element = elements.create(name, options)
-      if (name === 'cardNumber') {
-        this.cardNumberElement = element
+      // Extra options for IBAN field:
+      if (name === 'iban') {
+        options['supportedCountries'] = ['SEPA']
+        const $country = this.$element.find('[data-stripe="billing_details.address.country"]')
+        options['placeholderCountry'] = $country.val() || 'DE'
       }
+      let element = this.stripeElements.create(name, options)
       element.mount(field)
       if (this.clientsideValidationEnabled()) {
         const validator = Drupal.myClientsideValidation.validators[this.form_id]
@@ -165,6 +175,28 @@ class MethodElement {
   }
 
   /**
+   * Prepare data to handle each type of intent differently.
+   */
+  intentData () {
+    const name = camelCase(this.settings.intent_type)
+    let data = { payment_method: this.extraData() }
+    let handler
+    if (this.settings.intent_methods.includes('sepa_debit')) {
+      data.payment_method.sepa_debit = this.stripeElements.getElement('iban')
+      handler = name === 'setupIntent' ? 'confirmSepaDebitSetup' : 'confirmSepaDebitPayment'
+    }
+    else {
+      data.payment_method.card = this.stripeElements.getElement('cardNumber')
+      handler = name === 'setupIntent' ? 'confirmCardSetup' : 'confirmCardPayment'
+    }
+    return {
+      name: name,
+      data: data,
+      handler: this.stripe[handler]
+    }
+  }
+
+  /**
    * Validate the input data.
    * @param {object} submitter - The Drupal form submitter.
    */
@@ -176,19 +208,9 @@ class MethodElement {
       $validator.prepareForm()
       $validator.hideErrors()
     }
-    const data = {
-      payment_method_data: this.extraData(),
-    }
-    let intent = {
-      name: 'paymentIntent',
-      handler: this.stripe.handleCardPayment
-    }
-    if (this.settings.intent_type === 'setup_intent') {
-      intent.name = 'setupIntent'
-      intent.handler = this.stripe.handleCardSetup
-    }
+    const intent = this.intentData()
     intent.handler(
-      this.settings.client_secret, this.cardNumberElement, data
+      this.settings.client_secret, intent.data
     ).then((result) => {
       if (result.error) {
         this.errorHandler(result.error)
@@ -227,6 +249,13 @@ class MethodElement {
           case 'incomplete_expiry':
           case 'expired_card':
             $field = this.$element.find('[data-stripe-element="cardExpiry"]')
+            break
+          case 'invalid_bank_account_iban':
+          case 'invalid_iban_country_code':
+          case 'invalid_iban_start':
+          case 'invalid_iban':
+          case 'incomplete_iban':
+            $field = this.$element.find('[data-stripe-element="iban"]')
             break
         }
       }

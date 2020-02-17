@@ -10,7 +10,7 @@ use Stripe\Exception\ApiErrorException;
 /**
  * Configuration form for the Stripe payment method controller.
  */
-class CreditCardConfigurationForm implements MethodFormInterface {
+class StripeConfigurationForm implements MethodFormInterface {
 
   /**
    * Add form elements to the configuration form.
@@ -27,6 +27,7 @@ class CreditCardConfigurationForm implements MethodFormInterface {
    */
   public function form(array $form, array &$form_state, \PaymentMethod $method) {
     $cd = $method->controller_data;
+    $customer_data_form = $method->controller->customerDataForm();
 
     $library = libraries_detect('stripe-php');
     if (empty($library['installed'])) {
@@ -55,11 +56,12 @@ class CreditCardConfigurationForm implements MethodFormInterface {
       '#description' => t('Check this if you want to enable stripe payment plans. In addition to enabling this, your payment context needs to support recurrent payments'),
       '#default_value' => $cd['enable_recurrent_payments'],
     ];
+
     $form['input_settings'] = [
       '#type' => 'fieldset',
       '#title' => t('Personal data mapping'),
       '#description' => t('This setting allows you to map data from the payment context to stripe fields. If data is found for one of the mapped fields it will be transferred to stripe. Use a comma to separate multiple field keys.'),
-    ] + CustomerDataForm::configurationForm($method->controller_data['input_settings']);
+    ] + $customer_data_form->configurationForm($method->controller_data['input_settings']);
     return $form;
   }
 

@@ -8,6 +8,25 @@ namespace Drupal\stripe_payment;
 abstract class Utils {
 
   /**
+   * Check if a payment method uses a Stripe Payment controller.
+   *
+   * @param \PaymentMethod $method
+   *   The payment to check.
+   *
+   * @return bool
+   *   Whether the payment method uses a Stripe Payment controller.
+   */
+  public static function isStripeMethod(\PaymentMethod $method) {
+    $controller = array_values(stripe_payment_payment_method_controller_info());
+    foreach (stripe_payment_payment_method_controller_info() as $name => $controller) {
+      if ($method->controller instanceof $controller) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
    * Split a payment into one with only one-off payments and the rest.
    *
    * @param \Payment $payment

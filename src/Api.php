@@ -70,16 +70,17 @@ class Api {
    *   a setup intent if there are only recurring line items.
    */
   public function createIntent(\Payment $payment) {
+    $settings = $payment->method->controller->intentSettings;
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     // PaymentIntent: Make a payment immediately.
     if ($one_off->line_items) {
       return PaymentIntent::create([
         'amount'   => (int) ($one_off->totalAmount(TRUE) * 100),
         'currency' => $payment->currency_code,
-      ]);
+      ] + $settings);
     }
     // SetupIntent: Save card details for later use without initial payment.
-    return SetupIntent::create();
+    return SetupIntent::create($settings);
   }
 
   /**

@@ -83,6 +83,15 @@ function stripe_payment_schema() {
 }
 
 /**
+ * Enable the elements module.
+ */
+function stripe_payment_update_7201() {
+  if (!module_enable(['elements'], TRUE)) {
+    throw new DrupalUpdateException('Unable to enable elements. Please download it and put it in the appropriate folder.');
+  }
+}
+
+/**
  * Migrate from stripe_payment_plans to stripe_payment_subscriptions table.
  */
 function stripe_payment_update_7009() {
