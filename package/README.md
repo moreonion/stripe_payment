@@ -12,7 +12,6 @@ Install `nodejs` and `yarn`, then install the needed dependencies:
 Use the different `yarn` scripts for the development workflow:
 
     yarn lint
-    yarn test
     yarn dev
 
 For building a releaseable artifact (library file) use:

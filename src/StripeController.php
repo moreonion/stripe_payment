@@ -143,4 +143,27 @@ class StripeController extends \PaymentMethodController implements PaymentRecurr
     return TRUE;
   }
 
+  /**
+   * Create a payment intent if this wasn’t done already.
+   */
+  public function ajaxCallback(\Payment $payment) {
+    $api = Api::init($payment->method);
+    if (empty($payment->stripe['stripe_id'])) {
+      $intent = $api->createIntent($payment);
+      $payment->stripe = [
+        'stripe_id' => $intent->id,
+        'type' => $intent->object,
+      ];
+      entity_save('payment', $payment);
+    }
+    else {
+      $intent = $api->retrieveIntent($payment->stripe['stripe_id']);
+    }
+    return [
+      'client_secret' => $intent->client_secret,
+      'type' => $intent->object,
+      'methods' => $intent->payment_method_types,
+    ];
+  }
+
 }
