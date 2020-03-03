@@ -3,29 +3,25 @@
   "version": "0.0.0",
   "description": "JavaScript behavior for stripe_payment",
   "scripts": {
-    "dev": "webpack --config webpack.dev.js",
-    "dist": "webpack --config webpack.prod.js",
-    "drupal": "yarn run dist && cp dist/stripe.min.js ../stripe.min.js",
-    "drupal-dev": "yarn run dev && cp dist/stripe.min.js ../stripe.min.js",
+    "dev": "parcel build --no-minify --no-source-maps -d dist -o stripe.min.js src/main.js",
+    "dist": "parcel build --no-source-maps -d dist -o stripe.min.js src/main.js",
+    "drupal:dist": "yarn run dist && cp dist/stripe.min.js ../stripe.min.js",
+    "drupal:dev": "yarn run dev && cp dist/stripe.min.js ../stripe.min.js",
     "lint": "eslint src"
   },
   "devDependencies": {
     "@babel/core": "^7.8.4",
     "@babel/preset-env": "^7.8.4",
     "babel-eslint": "^10.0.3",
-    "babel-loader": "^8.0.6",
-    "core-js": "^3.6.4",
     "eslint": "^6.8.0",
     "eslint-config-standard": "^14.1.0",
-    "eslint-loader": "^3.0.3",
     "eslint-plugin-import": "^2.20.1",
     "eslint-plugin-node": "^11.0.0",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1",
-    "regenerator-runtime": "^0.13.3",
-    "uglifyjs-webpack-plugin": "^2.2.0",
-    "webpack": "^4.41.6",
-    "webpack-cli": "^4.0.0-beta.2"
+    "parcel-bundler": "^1.12.4",
+    "parcel-plugin-eslint": "^1.0.8-2",
+    "regenerator-runtime": "^0.13.3"
   },
   "dependencies": {}
 }

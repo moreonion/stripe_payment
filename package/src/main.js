@@ -1,5 +1,6 @@
 /* global Drupal, jQuery */
 
+import regeneratorRuntime from 'regenerator-runtime'
 import { MethodElement } from './method-element'
 
 var $ = jQuery
