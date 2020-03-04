@@ -231,8 +231,33 @@ class UtilsTest extends DrupalUnitTestCase {
       'product' => [
         'id' => 'item1',
         'name' => 'Item 1 test',
+        'statement_descriptor' => 'Item 1 test',
       ],
     ]], $options);
+  }
+
+  /**
+   * Test preparing a string to use as statement descriptor.
+   */
+  public function testStatementDescriptor() {
+    // Special characters are replaced if the transliteration module is enabled.
+    $s = 'Mäusefüßchengröße';
+    $output = Utils::getStatementDescriptor($s);
+    if (function_exists('transliteration_get')) {
+      $this->assertEqual($output, 'Maeusefuesschengroesse');
+    }
+    else {
+      $this->assertEqual($output, 'Mäusefüßchengröße');
+    }
+    // The output does not contain characters Stripe wouldn’t accept.
+    $s = '<, >, \, ", \'';
+    $output = Utils::getStatementDescriptor($s);
+    foreach (['<', '>', '\\', '"', '\''] as $c) {
+      $this->assertFalse(strpos($output, $c));
+    }
+    // If the output is too long, we don’t want to set a statement descriptor.
+    $s = 'This is a somewhat longer description.';
+    $this->assertNull(Utils::getStatementDescriptor($s));
   }
 
 }
