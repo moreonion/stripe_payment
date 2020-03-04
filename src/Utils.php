@@ -96,6 +96,7 @@ abstract class Utils {
     return [
       'id' => $line_item->name,
       'name' => $line_item->description,
+      'statement_descriptor' => self::getStatementDescriptor($line_item->description),
     ];
   }
 
@@ -213,6 +214,27 @@ abstract class Utils {
       }
     }
     return $offset_days ? $date->modify("-$offset_days day") : $date;
+  }
+
+  /**
+   * Prepare a string for use as statement descriptor.
+   *
+   * - Does not contain <, >, \, ", '.
+   * - Has a maximum of 22 characters.
+   *
+   * @param string $s
+   *   The string to modify.
+   *
+   * @return string|null
+   *   The safe string or `null` if the string is too long.
+   */
+  public static function getStatementDescriptor(string $s) {
+    // Remove characters not allowed in bank statements: <, >, \, ", '.
+    $s = preg_replace('(<|>|\\\\|"|\')', '', $s);
+    // Only return strings with a max length of 22 characters.
+    // (Stripe would not accept a longer string and cutting it off after 22 characters
+    // might produce a weird result on the subscriber’s bank statement.)
+    return strlen($s) > 22 ? NULL : $s;
   }
 
 }
