@@ -240,15 +240,13 @@ class UtilsTest extends DrupalUnitTestCase {
    * Test preparing a string to use as statement descriptor.
    */
   public function testStatementDescriptor() {
-    // Special characters are replaced if the transliteration module is enabled.
+    // Special characters are replaced if transliteration is enabled.
     $s = 'Mäusefüßchengröße';
     $output = Utils::getStatementDescriptor($s);
-    if (function_exists('transliteration_get')) {
-      $this->assertEqual($output, 'Maeusefuesschengroesse');
-    }
-    else {
-      $this->assertEqual($output, 'Mäusefüßchengröße');
-    }
+    $this->assertEqual($output, 'Maeusefuesschengroesse');
+    // The output is unmodified without transliteration.
+    $output = Utils::getStatementDescriptor($s, FALSE);
+    $this->assertEqual($output, 'Mäusefüßchengröße');
     // The output does not contain characters Stripe wouldn’t accept.
     $s = '<, >, \, ", \'';
     $output = Utils::getStatementDescriptor($s);

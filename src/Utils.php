@@ -225,14 +225,16 @@ abstract class Utils {
    *
    * @param string $s
    *   The string to modify.
+   * @param bool $transliterate
+   *   Whether to replace non-ASCII characters.
    *
    * @return string|null
    *   The safe string or `null` if the string is too long.
    */
-  public static function getStatementDescriptor(string $s) {
+  public static function getStatementDescriptor(string $s, bool $transliterate = TRUE) {
     // Transliterate non-ASCII characters if the transliteration module is enabled,
     // otherwise Stripe will strip them or use similar looking characters (ä→a).
-    if (function_exists('transliteration_get')) {
+    if ($transliterate && function_exists('transliteration_get')) {
       $s = transliteration_get($s);
     }
     // Remove characters not allowed in bank statements: <, >, \, ", '.
