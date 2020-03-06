@@ -227,15 +227,23 @@ abstract class Utils {
    *   The string to modify.
    * @param bool $transliterate
    *   Whether to replace non-ASCII characters.
+   * @param string $lang
+   *   The language to use for the transliteration.
+   *   An empty string defaults to the current language.
    *
    * @return string|null
    *   The safe string or `null` if the string is too long.
    */
-  public static function getStatementDescriptor(string $s, bool $transliterate = TRUE) {
+  public static function getStatementDescriptor(string $s, bool $transliterate = TRUE, string $lang = '') {
     // Transliterate non-ASCII characters if the transliteration module is enabled,
     // otherwise Stripe will strip them or use similar looking characters (ä→a).
     if ($transliterate && function_exists('transliteration_get')) {
-      $s = transliteration_get($s);
+      if (!$lang) {
+        // Get the 2 letter language code of the current language.
+        global $language;
+        $lang = substr($language->language, 0, 2);
+      }
+      $s = transliteration_get($s, '?', $lang);
     }
     // Remove characters not allowed in bank statements: <, >, \, ", '.
     $s = preg_replace('(<|>|\\\\|"|\')', '', $s);

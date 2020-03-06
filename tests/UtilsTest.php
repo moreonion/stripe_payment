@@ -242,7 +242,7 @@ class UtilsTest extends DrupalUnitTestCase {
   public function testStatementDescriptor() {
     // Special characters are replaced if transliteration is enabled.
     $s = 'Mäusefüßchengröße';
-    $output = Utils::getStatementDescriptor($s);
+    $output = Utils::getStatementDescriptor($s, TRUE, 'de');
     $this->assertEqual($output, 'Maeusefuesschengroesse');
     // The output is unmodified without transliteration.
     $output = Utils::getStatementDescriptor($s, FALSE);
