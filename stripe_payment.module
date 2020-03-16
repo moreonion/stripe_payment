@@ -53,6 +53,10 @@ function stripe_payment_theme() {
     'template' => 'stripe-payment-field',
     'file' => 'stripe_payment.theme.inc',
   ];
+  $hooks['stripe_payment_sepa_mandate_info'] = [
+    'template' => 'stripe-payment-sepa-mandate-info',
+    'file' => 'stripe_payment.theme.inc',
+  ];
   return $hooks;
 }
 

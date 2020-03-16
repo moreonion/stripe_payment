@@ -5,7 +5,9 @@ namespace Drupal\stripe_payment;
 use Stripe\Customer;
 use Stripe\Event;
 use Stripe\Exception\InvalidRequestException;
+use Stripe\Mandate;
 use Stripe\PaymentIntent;
+use Stripe\PaymentMethod;
 use Stripe\Plan;
 use Stripe\SetupIntent;
 use Stripe\Stripe;
@@ -99,6 +101,23 @@ class Api {
       return SetupIntent::retrieve($id);
     }
     return PaymentIntent::retrieve($id);
+  }
+
+  /**
+   * Retrieve data about a mandate by its ID.
+   *
+   * @param string $id
+   *   The mandate ID.
+   */
+  public function retrieveMandate($id) {
+    return Mandate::retrieve($id);
+  }
+
+  /**
+   * Retrieve a payment method by its ID.
+   */
+  public function retrievePaymentMethod($id) {
+    return PaymentMethod::retrieve($id);
   }
 
   /**
