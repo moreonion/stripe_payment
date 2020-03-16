@@ -15,6 +15,9 @@ class SepaController extends StripeController {
     $this->intentSettings = [
       'payment_method_types' => ['sepa_debit'],
     ];
+    $this->controller_data_defaults += [
+      'creditor_id' => '',
+    ];
     parent::__construct();
   }
 
@@ -36,6 +39,16 @@ class SepaController extends StripeController {
    */
   public function customerDataForm() {
     return new SepaCustomerDataForm();
+  }
+
+  /**
+   * Get a form for configuring the payment method.
+   *
+   * @return SepaConfigurationForm
+   *   A new SEPA configuration form.
+   */
+  public function configurationForm() {
+    return new SepaConfigurationForm();
   }
 
 }
