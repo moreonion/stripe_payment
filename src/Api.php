@@ -54,6 +54,10 @@ class Api {
    *   A new Api instance.
    */
   public static function init(\PaymentMethod $method) {
+    // This is a simple way to inject mock API objects during testing.
+    if (!empty($method->api)) {
+      return $method->api;
+    }
     libraries_load('stripe-php');
     Stripe::setApiVersion(static::API_VERSION);
     Stripe::setAppInfo('drupal/stripe-payment', static::getModuleVersion(), static::MODULE_URL, static::PARTNER_KEY);
