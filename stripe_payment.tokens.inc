@@ -29,15 +29,9 @@ function stripe_payment_tokens($type, array $tokens, array $data = [], array $op
     return [];
   }
   $replacements = [];
-  if ($original = $tokens['stripe-sepa-mandate-info'] ?? NULL) {
-    $api = Api::init($payment->method);
-    $intent = $api->retrieveIntent($payment->stripe['stripe_id']);
-    $payment_method = $api->retrievePaymentMethod($intent['payment_method']);
-    $mandate = $api->retrieveMandate($intent['mandate']);
+  if (($original = $tokens['stripe-sepa-mandate-info'] ?? NULL) && !empty($payment->stripe_sepa)) {
     $replacements[$original] = theme('stripe_payment_sepa_mandate_info', [
       'payment' => $payment,
-      'mandate' => $mandate,
-      'payment_method' => $payment_method,
     ]);
   }
   return $replacements;

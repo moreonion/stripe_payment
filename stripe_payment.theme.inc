@@ -28,12 +28,10 @@ function template_process_stripe_payment_field(&$vars) {
  * @param array $variables
  *   An associative array containing:
  *   - payment: The payment object for which the info is produced.
- *   - mandate: The stripe mandate info as loaded from the API.
- *   - payment_method: The stripe payment method information as loaded from the
- *              API.
  */
 function template_preprocess_stripe_payment_sepa_mandate_info(array &$variables) {
-  $variables['creditor_id'] = $variables['payment']->method->controller_data['creditor_id'];
-  $variables['mandate_reference'] = $variables['mandate']['payment_method_details']['sepa_debit']['reference'];
-  $variables['iban_last4'] = $variables['payment_method']['sepa_debit']['last4'];
+  $payment = $variables['payment'];
+  $variables['creditor_id'] = $payment->method->controller_data['creditor_id'];
+  $variables['mandate_reference'] = $payment->stripe_sepa['mandate_reference'];
+  $variables['iban_last4'] = $payment->stripe_sepa['last4'];
 }
