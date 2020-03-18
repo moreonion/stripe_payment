@@ -101,14 +101,27 @@ class StripeController extends \PaymentMethodController implements PaymentRecurr
     $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
 
     $api = Api::init($payment->method);
+    $intent = $this->fetchIntent($payment, $api);
+    entity_save('payment', $payment);
+    $this->createSubscriptions($payment, $api, $intent);
+  }
+
+  /**
+   * Load the intent object and populate the $payment object accordingly.
+   */
+  protected function fetchIntent(\Payment $payment, Api $api) {
     $intent = $api->retrieveIntent($payment->method_data['stripe_id']);
     $payment->stripe = [
       'stripe_id' => $intent->id,
       'type'      => $intent->object,
     ];
-    entity_save('payment', $payment);
+    return $intent;
+  }
 
-    // Make subscriptions for recurrent payments.
+  /**
+   * Create subscriptions for recurrent payments.
+   */
+  protected function createSubscriptions(\Payment $payment, Api $api, $intent) {
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     if ($recurring->line_items) {
       try {
