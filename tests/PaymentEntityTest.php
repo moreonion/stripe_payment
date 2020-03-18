@@ -29,9 +29,13 @@ class PaymentEntityTest extends DrupalUnitTestCase {
    * Delete the test payment method and all payments using it.
    */
   public function tearDown() {
-    foreach (entity_load('payment', FALSE, ['pmid' => $this->method->pmid]) as $payment) {
-      entity_delete('payment', $payment->pid);
-      echo "Deleting {$payment->pid}\n";
+    $pids = db_select('payment', 'p')
+      ->fields('p', ['pid'])
+      ->condition('p.pmid', $this->method->pmid)
+      ->execute()
+      ->fetchCol();
+    foreach ($pids as $pid) {
+      entity_delete('payment', $pid);
     }
     entity_delete('payment_method', $this->method->pmid);
     parent::tearDown();
@@ -69,6 +73,29 @@ class PaymentEntityTest extends DrupalUnitTestCase {
     // Test that all stripe data was removed.
     $this->assertEqual(0, db_select('stripe_payment', 's')->condition('s.pid', $payment->pid)->countQuery()->execute()->fetchField());
     $this->assertEqual(0, db_select('stripe_payment_sepa_mandate_info', 's')->condition('s.pid', $payment->pid)->countQuery()->execute()->fetchField());
+  }
+
+  /**
+   * Test non SEPA payment save and load.
+   */
+  public function testNonSepaSaveLoad() {
+    $stripe = ['stripe_id' => 'test-stripe-id', 'type' => 'test'];
+    $payment = entity_create('payment', [
+      'method' => $this->method,
+      'stripe' => $stripe,
+    ]);
+    entity_save('payment', $payment);
+
+    // Test that new data was saved.
+    $payment = entity_load_single('payment', $payment->pid);
+    $this->assertEqual($stripe, $payment->stripe);
+
+    $payment->stripe['stripe_id'] = 'test-stripe-id-updated';
+    entity_save('payment', $payment);
+
+    // Test that updated data was saved.
+    $payment = entity_load_single('payment', $payment->pid);
+    $this->assertEqual('test-stripe-id-updated', $payment->stripe['stripe_id']);
   }
 
 }

@@ -237,7 +237,8 @@ function stripe_payment_entity_load(array $entities, $entity_type) {
   if ($entity_type == 'payment') {
     $q = db_select('stripe_payment', 't');
     $q->leftJoin('stripe_payment_sepa_mandate_info', 's', 's.pid=t.pid');
-    $q->fields('t')->fields('s')
+    $q->fields('t', ['pid', 'stripe_id', 'type'])
+      ->fields('s', ['mandate_reference', 'last4'])
       ->condition('t.pid', array_keys($entities));
     $result = $q->execute();
     while ($data = $result->fetchAssoc()) {
