@@ -79,7 +79,63 @@ function stripe_payment_schema() {
       'stripe_id' => ['stripe_id'],
     ],
   ];
+  $schema['stripe_payment_sepa_mandate_info'] = [
+    'fields' => [
+      'pid' => [
+        'description' => 'The payment id.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'mandate_reference' => [
+        'description' => 'SEPA mandate reference.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'last4' => [
+        'description' => 'Last 4 digits of the IBAN for a SEPA mandate.',
+        'type' => 'varchar',
+        'length' => 4,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+    ],
+    'primary key' => ['pid'],
+  ];
   return $schema;
+}
+
+/**
+ * Create {stripe_payment_mandate_info} table.
+ */
+function stripe_payment_update_7202() {
+  db_create_table('stripe_payment_sepa_mandate_info', [
+    'fields' => [
+      'pid' => [
+        'description' => 'The payment id.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'mandate_reference' => [
+        'description' => 'Mandate reference number.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'last4' => [
+        'description' => 'Last 4 digits of the IBAN',
+        'type' => 'varchar',
+        'length' => 4,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+    ],
+    'primary key' => ['pid'],
+  ]);
 }
 
 /**
