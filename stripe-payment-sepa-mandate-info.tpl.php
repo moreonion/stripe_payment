@@ -13,5 +13,11 @@
  * - $iban_last4: Last 4 digits of the payee account’s IBAN.
  */
 ?>
-<h3>SEPA-Information</h3>
-<p>Die SEPA-Lastschrift erfolgt mit der Mandatsreferenz <?php echo $mandate_reference; ?> und der Creditor-ID <?php echo $creditor_id; ?> von deinem Konto mit den Endziffern ***<?php echo $iban_last4; ?>.</p>
+<h3><?php echo t('SEPA information'); ?></h3>
+<p><?php
+echo t('The SEPA direct debit is set up with the mandate reference @reference and the Creditor ID @creditor from your account with the final digits ***@last4.', [
+  '@reference' => $mandate_reference,
+  '@creditor' => $creditor_id,
+  '@last4' => $iban_last4,
+]);
+?></p>

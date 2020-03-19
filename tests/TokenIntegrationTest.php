@@ -23,8 +23,8 @@ class TokenIntegrationTest extends DrupalUnitTestCase {
     ];
     $result = token_replace('[payment:stripe-sepa-mandate-info]', ['payment' => $payment]);
     $expected = <<<HTML
-<h3>SEPA-Information</h3>
-<p>Die SEPA-Lastschrift erfolgt mit der Mandatsreferenz TEST-SEPA-REFERENCE und der Creditor-ID TEST-CREDITOR-ID von deinem Konto mit den Endziffern ***1234.</p>
+<h3>SEPA information</h3>
+<p>The SEPA direct debit is set up with the mandate reference TEST-SEPA-REFERENCE and the Creditor ID TEST-CREDITOR-ID from your account with the final digits ***1234.</p>
 
 HTML;
     $this->assertEqual($expected, $result);
