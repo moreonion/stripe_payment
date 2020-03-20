@@ -76,6 +76,8 @@ class MethodElement {
     const $textField = $(`
       <div class="form-item form-type-stripe-payment-field">
         <input type="text" class="default" />
+      </div>
+      <div class="form-item form-type-stripe-payment-field">
         <input type="text" class="error invalid" />
       </div>`
     ).hide().appendTo(this.$element)
