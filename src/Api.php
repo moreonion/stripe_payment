@@ -94,17 +94,20 @@ class Api {
    *
    * @param string $id
    *   The intent ID.
+   * @param string[] $expand
+   *   Array of sub-element keys that should be expanded.
    *
    * @return \Stripe\PaymentIntent|\Stripe\SetupIntent
    *   The intent identified by the ID.
    */
-  public function retrieveIntent($id) {
+  public function retrieveIntent($id, array $expand = []) {
     // Get a matching item via the API:
     // SetupIntent ids start with `seti_`, PaymentIntent ids with `pi_`.
-    if (strpos($id, 'seti') === 0) {
-      return SetupIntent::retrieve($id);
-    }
-    return PaymentIntent::retrieve($id);
+    $class = strpos($id, 'seti') === 0 ? SetupIntent::class : PaymentIntent::class;
+    return $class::retrieve([
+      'id' => $id,
+      'expand' => $expand,
+    ]);
   }
 
   /**

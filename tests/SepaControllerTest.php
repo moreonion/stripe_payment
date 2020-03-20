@@ -49,16 +49,17 @@ class SepaControllerTest extends DrupalUnitTestCase {
   public function testExecute() {
     $method = $this->method;
     $api = $this->createMock(Api::class);
-    $api->method('retrieveIntent')->willReturn(SetupIntent::constructFrom([
+    $mandate['payment_method_details']['sepa_debit']['reference'] = 'TEST-SEPA-REFERENCE';
+    $pm['sepa_debit']['last4'] = '1234';
+    $api->expects($this->once())
+      ->method('retrieveIntent')
+      ->with($this->equalTo('seti_testsetupintent'), $this->equalTo(['mandate', 'payment_method']))
+      ->willReturn(SetupIntent::constructFrom([
       'id' => 'seti_testsetupintent',
       'object' => 'setupintent',
-      'mandate' => 'test_mandate_id',
-      'payment_method' => 'test_payment_method_id',
+      'mandate' => Mandate::constructFrom($mandate),
+      'payment_method' => PaymentMethod::constructFrom($pm),
     ]));
-    $mandate['payment_method_details']['sepa_debit']['reference'] = 'TEST-SEPA-REFERENCE';
-    $api->method('retrieveMandate')->willReturn(Mandate::constructFrom($mandate));
-    $pm['sepa_debit']['last4'] = '1234';
-    $api->method('retrievePaymentMethod')->willReturn(PaymentMethod::constructFrom($pm));
     $method->api = $api;
     $payment = entity_create('payment', ['method' => $method]);
     $payment->method_data = ['stripe_id' => 'seti_testsetupintent'];

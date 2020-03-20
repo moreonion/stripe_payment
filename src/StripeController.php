@@ -109,8 +109,8 @@ class StripeController extends \PaymentMethodController implements PaymentRecurr
   /**
    * Load the intent object and populate the $payment object accordingly.
    */
-  protected function fetchIntent(\Payment $payment, Api $api) {
-    $intent = $api->retrieveIntent($payment->method_data['stripe_id']);
+  protected function fetchIntent(\Payment $payment, Api $api, array $expand = []) {
+    $intent = $api->retrieveIntent($payment->method_data['stripe_id'], $expand);
     $payment->stripe = [
       'stripe_id' => $intent->id,
       'type'      => $intent->object,
