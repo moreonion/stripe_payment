@@ -13,7 +13,7 @@ This module integrates [stripe](https://stripe.com) with the Drupal [payment fra
 * [payment forms](https://drupal.org/project/payment_forms)
 * [variable](https://drupal.org/project/variable)
 * [xautoload](https://drupal.org/project/xautoload) ≥ 5.0
-* The [stripe-php](https://github.com/stripe/stripe-php) library.
+* The [stripe-php](https://github.com/stripe/stripe-php) library ≥ 7.10.
 
 
 ## Installation

@@ -40,6 +40,7 @@ class StripeConfigurationForm implements MethodFormInterface {
       '#description' => t('Available from Your Account / Developers / API keys'),
       '#required' => TRUE,
       '#default_value' => $cd['private_key'],
+      '#weight' => 1,
     ];
 
     $form['public_key'] = [
@@ -48,6 +49,7 @@ class StripeConfigurationForm implements MethodFormInterface {
       '#description' => t('Available from Your Account / Developers / API keys'),
       '#required' => TRUE,
       '#default_value' => $cd['public_key'],
+      '#weight' => 2,
     ];
 
     $form['enable_recurrent_payments'] = [
@@ -55,12 +57,14 @@ class StripeConfigurationForm implements MethodFormInterface {
       '#title' => t('Enable recurrent payments'),
       '#description' => t('Check this if you want to enable stripe payment plans. In addition to enabling this, your payment context needs to support recurrent payments'),
       '#default_value' => $cd['enable_recurrent_payments'],
+      '#weight' => 11,
     ];
 
     $form['input_settings'] = [
       '#type' => 'fieldset',
       '#title' => t('Personal data mapping'),
       '#description' => t('This setting allows you to map data from the payment context to stripe fields. If data is found for one of the mapped fields it will be transferred to stripe. Use a comma to separate multiple field keys.'),
+      '#weight' => 50,
     ] + $customer_data_form->configurationForm($method->controller_data['input_settings']);
     return $form;
   }

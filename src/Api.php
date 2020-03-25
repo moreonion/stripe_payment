@@ -5,7 +5,9 @@ namespace Drupal\stripe_payment;
 use Stripe\Customer;
 use Stripe\Event;
 use Stripe\Exception\InvalidRequestException;
+use Stripe\Mandate;
 use Stripe\PaymentIntent;
+use Stripe\PaymentMethod;
 use Stripe\Plan;
 use Stripe\SetupIntent;
 use Stripe\Stripe;
@@ -52,6 +54,10 @@ class Api {
    *   A new Api instance.
    */
   public static function init(\PaymentMethod $method) {
+    // This is a simple way to inject mock API objects during testing.
+    if (!empty($method->api)) {
+      return $method->api;
+    }
     libraries_load('stripe-php');
     Stripe::setApiVersion(static::API_VERSION);
     Stripe::setAppInfo('drupal/stripe-payment', static::getModuleVersion(), static::MODULE_URL, static::PARTNER_KEY);
@@ -88,17 +94,37 @@ class Api {
    *
    * @param string $id
    *   The intent ID.
+   * @param string[] $expand
+   *   Array of sub-element keys that should be expanded.
    *
    * @return \Stripe\PaymentIntent|\Stripe\SetupIntent
    *   The intent identified by the ID.
    */
-  public function retrieveIntent($id) {
+  public function retrieveIntent($id, array $expand = []) {
     // Get a matching item via the API:
     // SetupIntent ids start with `seti_`, PaymentIntent ids with `pi_`.
-    if (strpos($id, 'seti') === 0) {
-      return SetupIntent::retrieve($id);
-    }
-    return PaymentIntent::retrieve($id);
+    $class = strpos($id, 'seti') === 0 ? SetupIntent::class : PaymentIntent::class;
+    return $class::retrieve([
+      'id' => $id,
+      'expand' => $expand,
+    ]);
+  }
+
+  /**
+   * Retrieve data about a mandate by its ID.
+   *
+   * @param string $id
+   *   The mandate ID.
+   */
+  public function retrieveMandate($id) {
+    return Mandate::retrieve($id);
+  }
+
+  /**
+   * Retrieve a payment method by its ID.
+   */
+  public function retrievePaymentMethod($id) {
+    return PaymentMethod::retrieve($id);
   }
 
   /**

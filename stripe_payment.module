@@ -53,6 +53,10 @@ function stripe_payment_theme() {
     'template' => 'stripe-payment-field',
     'file' => 'stripe_payment.theme.inc',
   ];
+  $hooks['stripe_payment_sepa_mandate_info'] = [
+    'template' => 'stripe-payment-sepa-mandate-info',
+    'file' => 'stripe_payment.theme.inc',
+  ];
   return $hooks;
 }
 
@@ -231,16 +235,24 @@ function stripe_payment_register_webhook(\PaymentMethod $method) {
  */
 function stripe_payment_entity_load(array $entities, $entity_type) {
   if ($entity_type == 'payment') {
-    $query = db_select('stripe_payment', 't')
-      ->fields('t')
-      ->condition('pid', array_keys($entities));
-    $result = $query->execute();
+    $q = db_select('stripe_payment', 't');
+    $q->leftJoin('stripe_payment_sepa_mandate_info', 's', 's.pid=t.pid');
+    $q->fields('t', ['pid', 'stripe_id', 'type'])
+      ->fields('s', ['mandate_reference', 'last4'])
+      ->condition('t.pid', array_keys($entities));
+    $result = $q->execute();
     while ($data = $result->fetchAssoc()) {
       $payment = $entities[$data['pid']];
       $payment->stripe = [
         'stripe_id' => $data['stripe_id'],
         'type' => $data['type'],
       ];
+      if ($data['mandate_reference'] || $data['last4']) {
+        $payment->stripe_sepa = [
+          'mandate_reference' => $data['mandate_reference'],
+          'last4' => $data['last4'],
+        ];
+      }
     }
   }
 }
@@ -281,6 +293,11 @@ function stripe_payment_payment_insert(\Payment $payment) {
       $data['pid'] = $payment->pid;
       db_insert('stripe_payment')->fields($data)->execute();
     }
+    if (!empty($payment->stripe_sepa)) {
+      $data = $payment->stripe_sepa;
+      $data['pid'] = $payment->pid;
+      db_insert('stripe_payment_sepa_mandate_info')->fields($data)->execute();
+    }
   }
 }
 
@@ -290,10 +307,15 @@ function stripe_payment_payment_insert(\Payment $payment) {
 function stripe_payment_payment_update(\Payment $payment) {
   if (Utils::isStripeMethod($payment->method)) {
     if (!empty($payment->stripe)) {
-      $data = $payment->stripe;
-      $update = db_merge('stripe_payment')
+      db_merge('stripe_payment')
         ->key(['pid' => $payment->pid])
-        ->fields($data)
+        ->fields($payment->stripe)
+        ->execute();
+    }
+    if (!empty($payment->stripe_sepa)) {
+      db_merge('stripe_payment_sepa_mandate_info')
+        ->key(['pid' => $payment->pid])
+        ->fields($payment->stripe_sepa)
         ->execute();
     }
   }
@@ -304,6 +326,8 @@ function stripe_payment_payment_update(\Payment $payment) {
  */
 function stripe_payment_payment_delete(\Payment $payment) {
   db_delete('stripe_payment')->condition('pid', $payment->pid)->execute();
+  db_delete('stripe_payment_sepa_mandate_info')
+    ->condition('pid', $payment->pid)->execute();
 }
 
 /**

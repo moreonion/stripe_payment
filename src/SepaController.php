@@ -15,6 +15,9 @@ class SepaController extends StripeController {
     $this->intentSettings = [
       'payment_method_types' => ['sepa_debit'],
     ];
+    $this->controller_data_defaults += [
+      'creditor_id' => '',
+    ];
     parent::__construct();
   }
 
@@ -36,6 +39,30 @@ class SepaController extends StripeController {
    */
   public function customerDataForm() {
     return new SepaCustomerDataForm();
+  }
+
+  /**
+   * Get a form for configuring the payment method.
+   *
+   * @return SepaConfigurationForm
+   *   A new SEPA configuration form.
+   */
+  public function configurationForm() {
+    return new SepaConfigurationForm();
+  }
+
+  /**
+   * Load the intent object and populate the $payment object accordingly.
+   */
+  protected function fetchIntent(\Payment $payment, Api $api, array $expand = []) {
+    $expand[] = 'mandate';
+    $expand[] = 'payment_method';
+    $intent = parent::fetchIntent($payment, $api, $expand);
+    $payment->stripe_sepa = [
+      'mandate_reference' => $intent['mandate']['payment_method_details']['sepa_debit']['reference'],
+      'last4' => $intent['payment_method']['sepa_debit']['last4'],
+    ];
+    return $intent;
   }
 
 }
