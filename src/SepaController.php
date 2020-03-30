@@ -55,13 +55,18 @@ class SepaController extends StripeController {
    * Load the intent object and populate the $payment object accordingly.
    */
   protected function fetchIntent(\Payment $payment, Api $api, array $expand = []) {
-    $expand[] = 'mandate';
-    $expand[] = 'payment_method';
+    $recurring = substr($payment->method_data['stripe_id'], 0, 5) == 'seti_';
+    if ($recurring) {
+      $expand[] = 'mandate';
+      $expand[] = 'payment_method';
+    }
     $intent = parent::fetchIntent($payment, $api, $expand);
-    $payment->stripe_sepa = [
-      'mandate_reference' => $intent['mandate']['payment_method_details']['sepa_debit']['reference'],
-      'last4' => $intent['payment_method']['sepa_debit']['last4'],
-    ];
+    if ($recurring) {
+      $payment->stripe_sepa = [
+        'mandate_reference' => $intent['mandate']['payment_method_details']['sepa_debit']['reference'],
+        'last4' => $intent['payment_method']['sepa_debit']['last4'],
+      ];
+    }
     return $intent;
   }
 

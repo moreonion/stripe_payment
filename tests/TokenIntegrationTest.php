@@ -30,4 +30,17 @@ HTML;
     $this->assertEqual($expected, $result);
   }
 
+  /**
+   * Test replacing [payment:stripe-sepa-mandate-info].
+   */
+  public function testNoMandateInfoWithoutMandate() {
+    $controller = payment_method_controller_load('stripe_payment_sepa');
+    $method = entity_create('payment_method', ['controller' => $controller]);
+    $method->controller_data['creditor_id'] = 'TEST-CREDITOR-ID';
+    $payment = entity_create('payment', ['method' => $method]);
+    $result = token_replace('[payment:stripe-sepa-mandate-info]', ['payment' => $payment], ['clear' => TRUE]);
+    $expected = '';
+    $this->assertEqual($expected, $result);
+  }
+
 }

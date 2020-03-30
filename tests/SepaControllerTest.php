@@ -6,6 +6,7 @@ use Upal\DrupalUnitTestCase;
 
 use Stripe\Mandate;
 use Stripe\PaymentMethod;
+use Stripe\PaymentIntent;
 use Stripe\SetupIntent;
 
 /**
@@ -55,11 +56,11 @@ class SepaControllerTest extends DrupalUnitTestCase {
       ->method('retrieveIntent')
       ->with($this->equalTo('seti_testsetupintent'), $this->equalTo(['mandate', 'payment_method']))
       ->willReturn(SetupIntent::constructFrom([
-      'id' => 'seti_testsetupintent',
-      'object' => 'setupintent',
-      'mandate' => Mandate::constructFrom($mandate),
-      'payment_method' => PaymentMethod::constructFrom($pm),
-    ]));
+        'id' => 'seti_testsetupintent',
+        'object' => 'setupintent',
+        'mandate' => Mandate::constructFrom($mandate),
+        'payment_method' => PaymentMethod::constructFrom($pm),
+      ]));
     $method->api = $api;
     $payment = entity_create('payment', ['method' => $method]);
     $payment->method_data = ['stripe_id' => 'seti_testsetupintent'];
@@ -69,6 +70,28 @@ class SepaControllerTest extends DrupalUnitTestCase {
       'mandate_reference' => 'TEST-SEPA-REFERENCE',
       'last4' => '1234',
     ], $payment->stripe_sepa);
+  }
+
+  /**
+   * Test that $payment->stripe_sepa is not set for one-off payments.
+   */
+  public function testExecuteOneOff() {
+    $method = $this->method;
+    $api = $this->createMock(Api::class);
+    $api->expects($this->once())
+      ->method('retrieveIntent')
+      ->with($this->equalTo('pi_testpaymentintent'), $this->equalTo([]))
+      ->willReturn(PaymentIntent::constructFrom([
+        'id' => 'pi_testpaymentintent',
+        'object' => 'paymentintent',
+      ]));
+    $method->api = $api;
+    $payment = entity_create('payment', ['method' => $method]);
+    $payment->method_data = ['stripe_id' => 'pi_testpaymentintent'];
+    $payment->stripe_sepa = NULL;
+    $method->controller->execute($payment);
+
+    $this->assertEmpty($payment->stripe_sepa);
   }
 
 }
