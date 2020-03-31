@@ -59,12 +59,19 @@ class SepaController extends StripeController {
     if ($recurring) {
       $expand[] = 'mandate';
       $expand[] = 'payment_method';
-    }
-    $intent = parent::fetchIntent($payment, $api, $expand);
-    if ($recurring) {
+      $intent = parent::fetchIntent($payment, $api, $expand);
       $payment->stripe_sepa = [
         'mandate_reference' => $intent['mandate']['payment_method_details']['sepa_debit']['reference'],
         'last4' => $intent['payment_method']['sepa_debit']['last4'],
+      ];
+    }
+    else {
+      $intent = parent::fetchIntent($payment, $api, $expand);
+      $details = $intent['charges']['data'][0]['payment_method_details']['sepa_debit'];
+      $mandate = $api->retrieveMandate($details['mandate']);
+      $payment->stripe_sepa = [
+        'mandate_reference' => $mandate['payment_method_details']['sepa_debit']['reference'],
+        'last4' => $details['last4'],
       ];
     }
     return $intent;
