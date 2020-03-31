@@ -55,12 +55,24 @@ class SepaController extends StripeController {
    * Load the intent object and populate the $payment object accordingly.
    */
   protected function fetchIntent(\Payment $payment, Api $api, array $expand = []) {
-    $expand[] = 'mandate';
-    $expand[] = 'payment_method';
-    $intent = parent::fetchIntent($payment, $api, $expand);
+    $recurring = substr($payment->method_data['stripe_id'], 0, 5) == 'seti_';
+    if ($recurring) {
+      $expand[] = 'mandate';
+      $expand[] = 'payment_method';
+      $intent = parent::fetchIntent($payment, $api, $expand);
+      $mandate = $intent['mandate'];
+      $details = $intent['payment_method']['sepa_debit'];
+    }
+    else {
+      // At the time of writing this neither PaymentIntents nor PaymentMethods
+      // include the mandate data. So we need this detour via charges.
+      $intent = parent::fetchIntent($payment, $api, $expand);
+      $details = $intent['charges']['data'][0]['payment_method_details']['sepa_debit'];
+      $mandate = $api->retrieveMandate($details['mandate']);
+    }
     $payment->stripe_sepa = [
-      'mandate_reference' => $intent['mandate']['payment_method_details']['sepa_debit']['reference'],
-      'last4' => $intent['payment_method']['sepa_debit']['last4'],
+      'mandate_reference' => $mandate['payment_method_details']['sepa_debit']['reference'],
+      'last4' => $details['last4'],
     ];
     return $intent;
   }
