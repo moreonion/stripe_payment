@@ -2,12 +2,10 @@
 
 namespace Drupal\stripe_payment;
 
-use Drupal\payment_forms\PaymentFormInterface;
-
 /**
  * Stripe form helper class.
  */
-class StripeForm implements PaymentFormInterface {
+abstract class StripeForm {
 
   /**
    * Add form settings for Stripe payments.
@@ -22,7 +20,7 @@ class StripeForm implements PaymentFormInterface {
    * @return array
    *   The updated form array.
    */
-  public function form(array $form, array &$form_state, \Payment $payment) {
+  public static function form(array $form, array &$form_state, \Payment $payment) {
     $method = &$payment->method;
     $customer_data_form = $method->controller->customerDataForm();
 
@@ -68,7 +66,7 @@ class StripeForm implements PaymentFormInterface {
    * @param \Payment $payment
    *   The payment object.
    */
-  public function validate(array $element, array &$form_state, \Payment $payment) {
+  public static function validate(array $element, array &$form_state, \Payment $payment) {
     $values = drupal_array_get_nested_value($form_state['values'], $element['#parents']);
     $payment->method_data['stripe_id'] = $values['stripe_id'];
     $customer_data_form = $payment->method->controller->customerDataForm();

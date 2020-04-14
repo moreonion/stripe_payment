@@ -23,9 +23,8 @@ class SepaForm extends AccountForm {
    *   The updated form array.
    */
   public function form(array $form, array &$form_state, \Payment $payment) {
-    $stripe_form = new StripeForm();
     $form = parent::form($form, $form_state, $payment);
-    $form = $stripe_form->form($form, $form_state, $payment);
+    $form = StripeForm::form($form, $form_state, $payment);
 
     // Override payment fields.
     $form['iban'] = [
