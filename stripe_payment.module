@@ -141,13 +141,13 @@ function stripe_payment_webhook($method) {
   catch (\UnexpectedValueException $e) {
     $message = 'Rejected data for webhook (pmid: @pmid). @description.';
     $variables = ['@description' => $e->getMessage(), '@pmid' => $method->pmid];
-    watchdog('stripe_payment', $message, $variables, WATCHDOG_WARNING);
+    watchdog_exception('stripe_payment', $e, $message, $variables, WATCHDOG_WARNING);
     return MENU_ACCESS_DENIED;
   }
   catch (SignatureVerificationException $e) {
     $message = 'Rejected signature for webhook (pmid: @pmid). @description.';
     $variables = ['@description' => $e->getMessage(), '@pmid' => $method->pmid];
-    watchdog('stripe_payment', $message, $variables, WATCHDOG_WARNING);
+    watchdog_exception('stripe_payment', $e, $message, $variables, WATCHDOG_WARNING);
     return MENU_ACCESS_DENIED;
   }
 
@@ -271,12 +271,12 @@ function stripe_payment_payment_method_delete(\PaymentMethod $method) {
         if ($e->getStripeCode() === 'resource_missing') {
           $message = 'No webhook found for pmid @pmid, nothing to delete. @description.';
           $variables = ['@pmid' => $method->pmid, '@description' => $e->getMessage()];
-          watchdog('stripe_payment', $message, $variables, WATCHDOG_INFO);
+          watchdog_exception('stripe_payment', $e, $message, $variables, WATCHDOG_INFO);
         }
         else {
           $message = 'Could not delete webhook for pmid @pmid. @description.';
           $variables = ['@pmid' => $method->pmid, '@description' => $e->getMessage()];
-          watchdog('stripe_payment', $message, $variables, WATCHDOG_WARNING);
+          watchdog_exception('stripe_payment', $e, $message, $variables, WATCHDOG_WARNING);
         }
       }
     }
