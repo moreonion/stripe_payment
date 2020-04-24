@@ -83,6 +83,7 @@ class Api {
       return PaymentIntent::create([
         'amount'   => (int) ($one_off->totalAmount(TRUE) * 100),
         'currency' => $payment->currency_code,
+        'setup_future_usage' => $recurring->line_items ? 'off_session' : NULL,
       ] + $settings);
     }
     // SetupIntent: Save card details for later use without initial payment.
