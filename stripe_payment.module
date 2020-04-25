@@ -6,7 +6,12 @@
  */
 
 use Drupal\stripe_payment\Api;
+use Drupal\stripe_payment\CreditCardController;
+use Drupal\stripe_payment\CreditCardControllerRecurrent;
+use Drupal\stripe_payment\SepaController;
+use Drupal\stripe_payment\SepaControllerRecurrent;
 use Drupal\stripe_payment\Utils;
+use Drupal\webform_paymethod_select\PaymentRecurrentController;
 use Stripe\Event;
 use Stripe\Webhook;
 use Stripe\Exception\InvalidRequestException;
@@ -64,10 +69,11 @@ function stripe_payment_theme() {
  * Implements hook_payment_method_controller_info().
  */
 function stripe_payment_payment_method_controller_info() {
-  return array(
-    'stripe_payment_credit_card' => '\Drupal\stripe_payment\CreditCardController',
-    'stripe_payment_sepa' => '\Drupal\stripe_payment\SepaController',
-  );
+  $recurrent = module_exists('webform_paymethod_select') && interface_exists(PaymentRecurrentController::class, TRUE);
+  return [
+    'stripe_payment_credit_card' => $recurrent ? CreditCardControllerRecurrent::class : CreditCardController::class,
+    'stripe_payment_sepa' => $recurrent ? SepaControllerRecurrent::class : SepaController::class,
+  ];
 }
 
 /**

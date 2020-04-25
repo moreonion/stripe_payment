@@ -2,13 +2,12 @@
 
 namespace Drupal\stripe_payment;
 
-use Drupal\webform_paymethod_select\PaymentRecurrentController;
 use Stripe\Exception\ApiErrorException;
 
 /**
  * Payment method controller for stripe credit card payments.
  */
-class StripeController extends \PaymentMethodController implements PaymentRecurrentController {
+class StripeController extends \PaymentMethodController {
 
   public $controller_data_defaults = [
     'private_key' => '',
