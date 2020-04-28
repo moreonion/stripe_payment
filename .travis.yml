@@ -23,7 +23,7 @@ before_script:
   - repo=`pwd`
   - root=$HOME/test-root
   - mysql -e 'create database drupal'
-  - php -d include_path=`pwd` -d sendmail_path=`which true` ~/.composer/vendor/bin/drush.php --yes core-quick-drupal --core=drupal-7.67 --profile=testing --no-server --db-url=mysql://root:@127.0.0.1/drupal --root=$root
+  - php -d include_path=`pwd` -d sendmail_path=`which true` ~/.composer/vendor/bin/drush.php --yes core-quick-drupal --core=drupal-7.69 --profile=testing --no-server --db-url=mysql://root:@127.0.0.1/drupal --root=$root
   - ln -s $repo $root/sites/all/modules/module_under_test
   - cd $root
   - drush --yes pm-enable stripe_payment
