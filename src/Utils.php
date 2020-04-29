@@ -17,13 +17,8 @@ abstract class Utils {
    *   Whether the payment method uses a Stripe Payment controller.
    */
   public static function isStripeMethod(\PaymentMethod $method) {
-    $controller = array_values(stripe_payment_payment_method_controller_info());
-    foreach (stripe_payment_payment_method_controller_info() as $name => $controller) {
-      if ($method->controller instanceof $controller) {
-        return TRUE;
-      }
-    }
-    return FALSE;
+    $info = stripe_payment_payment_method_controller_info();
+    return isset($info[$method->controller->name]);
   }
 
   /**
