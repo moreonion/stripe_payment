@@ -18,9 +18,7 @@ For building a releaseable artifact (library file) use:
 
     yarn dist
 
-The development files are configured to be created under `build/`, the
-releaseable files are created under `dist/`.
+Build the js and copy it in the right place for Drupal with either:
 
-For Drupal copy the releaseable files to `..`:
-
-    yarn drupal
+    yarn drupal:dev
+    yarn drupal:dist
