@@ -211,6 +211,9 @@ class MethodElement {
       data.payment_method.card = this.stripeElements.getElement('cardNumber')
       handler = name === 'setupIntent' ? 'confirmCardSetup' : 'confirmCardPayment'
     }
+    if (this.intent.form_build_id) {
+      this.$element.closest('form').find('[name=form_build_id]').val(this.intent.form_build_id.new)
+    }
     return {
       name: name,
       data: data,
