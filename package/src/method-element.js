@@ -44,7 +44,9 @@ class MethodElement {
    */
   waitForLibrariesThenInit () {
     if (typeof Stripe !== 'undefined') {
-      this.stripe = Stripe(this.settings.public_key)
+      this.stripe = Stripe(this.settings.public_key, {
+        locale: document.documentElement.lang,
+      })
       this.initElements()
     }
     else {
@@ -118,7 +120,7 @@ class MethodElement {
    * Initialize empty containers with Stripe elements (iframes for form input).
    */
   initElements () {
-    this.stripeElements = this.stripe.elements({ locale: document.documentElement.lang, fonts: this.getFontSrc() })
+    this.stripeElements = this.stripe.elements({ fonts: this.getFontSrc() })
     const options = {
       style: this.getStyles(),
       classes: { invalid: 'invalid', complete: 'valid', focus: 'focus' }
