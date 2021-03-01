@@ -26,6 +26,14 @@ use Stripe\Exception\SignatureVerificationException;
 define('STRIPE_PAYMENT_STATUS_ACCEPTED', 'stripe_payment_status_accepted');
 
 /**
+ * Stripe specific failed payment status.
+ *
+ * This status is set, when a payment is submitted without a previous AJAX
+ * request to retrieve the intent.
+ */
+define('STRIPE_PAYMENT_STATUS_NO_INTENT', 'stripe_payment_no_intent');
+
+/**
  * Implements hook_payment_status_info().
  */
 function stripe_payment_payment_status_info() {
@@ -34,6 +42,11 @@ function stripe_payment_payment_status_info() {
       'parent' => PAYMENT_STATUS_SUCCESS,
       'status' => STRIPE_PAYMENT_STATUS_ACCEPTED,
       'title' => t('Accepted'),
+    ]),
+    new PaymentStatusInfo([
+      'parent' => PAYMENT_STATUS_FAILED,
+      'status' => STRIPE_PAYMENT_STATUS_NO_INTENT,
+      'title' => t('Payment submitted without intent.'),
     ]),
   ];
 }

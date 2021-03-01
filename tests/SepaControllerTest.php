@@ -73,6 +73,21 @@ class SepaControllerTest extends DrupalUnitTestCase {
   }
 
   /**
+   * Test executing without a prior AJAX call to create an intent.
+   */
+  public function testExecuteWithoutIntent() {
+    $method = $this->method;
+    $api = $this->createMock(Api::class);
+    $api->expects($this->never())->method($this->anything());
+    $method->api = $api;
+    $payment = entity_create('payment', ['method' => $method]);
+    $payment->method_data = [];
+    $method->controller->execute($payment);
+    $this->assertEqual(STRIPE_PAYMENT_STATUS_NO_INTENT, $payment->getStatus()->status);
+    $this->assertTrue(payment_status_is_or_has_ancestor($payment->getStatus()->status, PAYMENT_STATUS_FAILED));
+  }
+
+  /**
    * Test that $payment->stripe_sepa is not set for one-off payments.
    */
   public function testExecuteOneOff() {
