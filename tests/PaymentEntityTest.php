@@ -14,7 +14,7 @@ class PaymentEntityTest extends DrupalUnitTestCase {
   /**
    * Create a test payment method.
    */
-  public function setUp() {
+  public function setUp() : void {
     parent::setUp();
     $controller = payment_method_controller_load('stripe_payment_sepa');
     $method = entity_create('payment_method', [
@@ -28,7 +28,7 @@ class PaymentEntityTest extends DrupalUnitTestCase {
   /**
    * Delete the test payment method and all payments using it.
    */
-  public function tearDown() {
+  public function tearDown() : void {
     $pids = db_select('payment', 'p')
       ->fields('p', ['pid'])
       ->condition('p.pmid', $this->method->pmid)
