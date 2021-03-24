@@ -97,6 +97,11 @@ class StripeController extends \PaymentMethodController {
    *   Whether the payment was successfully executed or not.
    */
   public function execute(\Payment $payment) {
+    if (empty($payment->method_data['stripe_id'])) {
+      watchdog('stripe_payment', 'A payment was submitted without an intent.', [], WATCHDOG_WARNING);
+      $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_NO_INTENT));
+      return;
+    }
     $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
 
     $api = Api::init($payment->method);
