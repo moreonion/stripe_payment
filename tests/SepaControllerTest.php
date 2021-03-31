@@ -122,4 +122,20 @@ class SepaControllerTest extends DrupalUnitTestCase {
     ], $payment->stripe_sepa);
   }
 
+  /**
+   * Test the intent id is returned for webform results.
+   */
+  public function testWebformData() {
+    $controller = $this->method->controller;
+    $this->assertTrue(webform_paymethod_select_implements_data_interface($controller));
+
+    $info = $controller->webformDataInfo();
+    $this->assertArraySubset(['stripe_intent' => 'Stripe intent ID'], $info);
+
+    $payment = $payment = entity_create('payment', ['method' => $this->method]);
+    $payment->stripe['stripe_id'] = 'seti_test';
+    $data = $controller->webformData($payment);
+    $this->assertArraySubset(['stripe_intent' => 'seti_test'], $data);
+  }
+
 }
