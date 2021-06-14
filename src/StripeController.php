@@ -187,7 +187,7 @@ class StripeController extends \PaymentMethodController {
    * Column headers for webform data.
    */
   public function webformDataInfo() {
-    $info['stripe_intent'] = t('Stripe intent ID');
+    $info['transaction_id'] = t('Transaction ID');
     return $info;
   }
 
@@ -195,7 +195,7 @@ class StripeController extends \PaymentMethodController {
    * Data for webform results.
    */
   public function webformData(\Payment $payment) {
-    $data['stripe_intent'] = $payment->stripe['stripe_id'];
+    $data['transaction_id'] = $payment->stripe['stripe_id'];
     return $data;
   }
 
