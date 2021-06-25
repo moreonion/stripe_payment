@@ -1,9 +1,9 @@
 /* global Drupal, jQuery, Stripe */
 
-var $ = jQuery
+const $ = jQuery
 
 function deepSet (obj, keys, value) {
-  var key = keys.shift()
+  const key = keys.shift()
   if (keys.length > 0) {
     if (typeof obj[key] === 'undefined') {
       obj[key] = {}
