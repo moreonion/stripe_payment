@@ -30,9 +30,9 @@ class SepaForm extends AccountForm {
     $form['iban'] = [
       '#type' => 'stripe_payment_field',
       '#field_name' => 'iban',
+      '#parents' => ['iban'],
       '#attributes' => [
         'class' => ['iban'],
-        'name' => 'iban',
       ],
     ] + $form['ibanbic']['iban'];
 

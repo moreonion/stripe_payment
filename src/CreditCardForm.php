@@ -30,25 +30,25 @@ class CreditCardForm extends _CreditCardForm {
     $form['credit_card_number'] = [
       '#type' => 'stripe_payment_field',
       '#field_name' => 'cardNumber',
+      '#parents' => ['cc-number'],
       '#attributes' => [
         'class' => ['cc-number'],
-        'name' => 'cc-number',
       ],
     ] + $form['credit_card_number'];
     $form['secure_code'] = [
       '#type' => 'stripe_payment_field',
       '#field_name' => 'cardCvc',
+      '#parents' => ['cc-cvv'],
       '#attributes' => [
         'class' => ['cc-cvv'],
-        'name' => 'cc-cvv',
       ],
     ] + $form['secure_code'];
     $form['expiry_date'] = [
       '#type' => 'stripe_payment_field',
       '#field_name' => 'cardExpiry',
+      '#parents' => ['cc-expiry'],
       '#attributes' => [
         'class' => ['cc-expiry'],
-        'name' => 'cc-expiry',
       ],
     ] + $form['expiry_date'];
 
