@@ -303,7 +303,7 @@ class MethodElement {
       }
       // Show message above the payment fieldset in want of a better place.
       else {
-        $message.addClass('stripe-error').insertBefore(this.$element)
+        $message.addClass('stripe-error').insertBefore(this.$element.closest('.form-item'))
       }
     }
   }
