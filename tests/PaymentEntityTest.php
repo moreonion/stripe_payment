@@ -9,6 +9,11 @@ use Upal\DrupalUnitTestCase;
  */
 class PaymentEntityTest extends DrupalUnitTestCase {
 
+  /**
+   * Payment method for the tests.
+   *
+   * @var \PaymentMethod
+   */
   protected $method;
 
   /**

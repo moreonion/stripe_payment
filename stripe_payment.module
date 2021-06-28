@@ -142,7 +142,10 @@ function stripe_payment_menu() {
 function stripe_payment_webhook($method) {
   if (!Utils::isStripeMethod($method)) {
     $message = "Received Stripe event for wrong payment method \"@method\" (pmid: @pmid).";
-    $variables = ['@method' => $method->controller->name, '@pmid' => $method->pmid];
+    $variables = [
+      '@method' => $method->controller->name,
+      '@pmid' => $method->pmid,
+    ];
     watchdog('stripe_payment', $message, $variables, WATCHDOG_ERROR);
     return 405;
   }
@@ -171,8 +174,14 @@ function stripe_payment_webhook($method) {
   }
 
   $event_types = [
-    'succeeded' => [Event::PAYMENT_INTENT_SUCCEEDED, Event::SETUP_INTENT_SUCCEEDED],
-    'failed' => [Event::PAYMENT_INTENT_PAYMENT_FAILED, Event::SETUP_INTENT_SETUP_FAILED],
+    'succeeded' => [
+      Event::PAYMENT_INTENT_SUCCEEDED,
+      Event::SETUP_INTENT_SUCCEEDED,
+    ],
+    'failed' => [
+      Event::PAYMENT_INTENT_PAYMENT_FAILED,
+      Event::SETUP_INTENT_SETUP_FAILED,
+    ],
   ];
   if (!in_array($event->type, array_merge($event_types['succeeded'], $event_types['failed']))) {
     return 'Ignoring unkown event';
@@ -289,12 +298,18 @@ function stripe_payment_payment_method_delete(\PaymentMethod $method) {
       catch (InvalidRequestException $e) {
         if ($e->getStripeCode() === 'resource_missing') {
           $message = 'No webhook found for pmid @pmid, nothing to delete. @description.';
-          $variables = ['@pmid' => $method->pmid, '@description' => $e->getMessage()];
+          $variables = [
+            '@pmid' => $method->pmid,
+            '@description' => $e->getMessage(),
+          ];
           watchdog('stripe_payment', $message, $variables, WATCHDOG_INFO);
         }
         else {
           $message = 'Could not delete webhook for pmid @pmid. @description.';
-          $variables = ['@pmid' => $method->pmid, '@description' => $e->getMessage()];
+          $variables = [
+            '@pmid' => $method->pmid,
+            '@description' => $e->getMessage(),
+          ];
           watchdog('stripe_payment', $message, $variables, WATCHDOG_WARNING);
         }
       }

@@ -45,7 +45,7 @@ class SepaForm extends AccountForm {
     $form['sepa_authorization'] = [
       '#type' => 'container',
       '#attributes' => [
-        'class' => ['stripe-payment-sepa-authorization']
+        'class' => ['stripe-payment-sepa-authorization'],
       ],
     ];
     $form['sepa_authorization'][]['#markup'] = check_markup($message['value'], $message['format']);

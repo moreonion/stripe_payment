@@ -54,7 +54,10 @@ class SepaControllerTest extends DrupalUnitTestCase {
     $pm['sepa_debit']['last4'] = '1234';
     $api->expects($this->once())
       ->method('retrieveIntent')
-      ->with($this->equalTo('seti_testsetupintent'), $this->equalTo(['mandate', 'payment_method']))
+      ->with($this->equalTo(
+        'seti_testsetupintent'),
+        $this->equalTo(['mandate', 'payment_method'])
+      )
       ->willReturn(SetupIntent::constructFrom([
         'id' => 'seti_testsetupintent',
         'object' => 'setupintent',
