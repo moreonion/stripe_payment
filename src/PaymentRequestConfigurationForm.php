@@ -2,6 +2,8 @@
 
 namespace Drupal\stripe_payment;
 
+include_once DRUPAL_ROOT . '/includes/locale.inc';
+
 /**
  * Configuration form for the Stripe Payment Request payment method controller.
  */
@@ -23,6 +25,14 @@ class PaymentRequestConfigurationForm extends StripeConfigurationForm {
   public function form(array $form, array &$form_state, \PaymentMethod $method) {
     $form = parent::form($form, $form_state, $method);
     $cd = $method->controller_data;
+    $form['account_country'] = [
+      '#type' => 'select',
+      '#title' => t('Stripe account country'),
+      '#description' => t('The country of your Stripe account.'),
+      '#default_value' => $cd['account_country'],
+      '#options' => country_get_list(),
+      '#required' => TRUE,
+    ];
     $form['button_type'] = [
       '#type' => 'select',
       '#title' => t('Pay button type'),

@@ -27,6 +27,14 @@ class PaymentRequestForm implements PaymentFormInterface {
     $pmid = $payment->method->pmid;
     $cd = $payment->method->controller_data;
     $settings = &$form['#attached']['js'][0]['data']['stripe_payment']["pmid_$pmid"];
+    $settings['transaction'] = [
+      'country' => $cd['account_country'],
+      'currency' => strtolower($payment->currency_code),
+      'total' => [
+        'amount' => (int) ($payment->totalAmount(TRUE) * 100),
+        'label' => $payment->description,
+      ],
+    ];
     $settings['button'] = [
       'type' => $cd['button_type'],
       'style' => $cd['button_style'],

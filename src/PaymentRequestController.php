@@ -16,6 +16,7 @@ class PaymentRequestController extends StripeController {
       'payment_method_types' => ['card'],
     ];
     $this->controller_data_defaults += [
+      'account_country' => variable_get('site_default_country', ''),
       'button_type' => 'default',
       'button_style'  => 'dark',
     ];
