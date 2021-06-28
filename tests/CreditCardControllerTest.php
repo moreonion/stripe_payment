@@ -62,12 +62,12 @@ class CreditCardControllerTest extends DrupalUnitTestCase {
     $this->assertTrue(webform_paymethod_select_implements_data_interface($controller));
 
     $info = $controller->webformDataInfo();
-    $this->assertArraySubset(['transaction_id' => 'Transaction ID'], $info);
+    $this->assertEmpty(array_diff(['transaction_id' => 'Transaction ID'], $info));
 
     $payment = $payment = entity_create('payment', ['method' => $this->method]);
     $payment->stripe['stripe_id'] = 'pi_test';
     $data = $controller->webformData($payment);
-    $this->assertArraySubset(['transaction_id' => 'pi_test'], $data);
+    $this->assertEmpty(array_diff(['transaction_id' => 'pi_test'], $data));
   }
 
 }
