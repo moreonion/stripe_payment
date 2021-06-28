@@ -24,7 +24,13 @@ class PaymentRequestForm implements PaymentFormInterface {
    */
   public function form(array $form, array &$form_state, \Payment $payment) {
     $form = StripeForm::form($form, $form_state, $payment);
-
+    $pmid = $payment->method->pmid;
+    $cd = $payment->method->controller_data;
+    $settings = &$form['#attached']['js'][0]['data']['stripe_payment']["pmid_$pmid"];
+    $settings['button'] = [
+      'type' => $cd['button_type'],
+      'style' => $cd['button_style'],
+    ];
     return $form;
   }
 

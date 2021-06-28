@@ -15,6 +15,10 @@ class PaymentRequestController extends StripeController {
     $this->intentSettings = [
       'payment_method_types' => ['card'],
     ];
+    $this->controller_data_defaults += [
+      'button_type' => 'default',
+      'button_style'  => 'dark',
+    ];
     parent::__construct();
   }
 
