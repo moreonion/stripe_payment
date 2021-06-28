@@ -136,6 +136,17 @@ function stripe_payment_menu() {
     'access arguments' => ['payment.payment.administer'],
     'weight' => 10,
   ];
+  // Provide the Domain Association File for Apple Pay.
+  $apple_pay_methods = array_filter(entity_load('payment_method'), function ($m) {
+    return $m->controller instanceof PaymentRequestController && $m->enabled;
+  });
+  if (!empty($apple_pay_methods)) {
+    $items['.well-known/apple-developer-merchantid-domain-association'] = [
+      'title' => 'Apple Developer MerchantID Domain Association',
+      'access callback' => TRUE,
+      'page callback' => 'stripe_payment_apple_pay_domain_association_file',
+    ];
+  }
   return $items;
 }
 
@@ -231,6 +242,21 @@ function stripe_payment_webhook($method) {
 }
 
 /**
+ * Menu callback returning the Stripe Domain Association File for Apple Pay.
+ *
+ * The file is a copy of
+ * https://stripe.com/files/apple-pay/apple-developer-merchantid-domain-association.
+ */
+function stripe_payment_apple_pay_domain_association_file() {
+  drupal_add_http_header('Content-type', 'application/octet-stream');
+  $path = drupal_get_path('module', 'stripe_payment');
+  $path .= '/static/apple-developer-merchantid-domain-association';
+  readfile($path);
+  drupal_page_footer();
+  exit;
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function stripe_payment_form_payment_form_payment_method_alter(&$form, &$form_state) {
@@ -289,6 +315,24 @@ function stripe_payment_entity_load(array $entities, $entity_type) {
 }
 
 /**
+ * Implements hook_payment_method_insert().
+ */
+function stripe_payment_payment_method_insert(\PaymentMethod $method) {
+  if ($method->controller instanceof PaymentRequestController) {
+    variable_set('menu_rebuild_needed', TRUE);
+  }
+}
+
+/**
+ * Implements hook_payment_method_update().
+ */
+function stripe_payment_payment_method_update(\PaymentMethod $method) {
+  if ($method->controller instanceof PaymentRequestController) {
+    variable_set('menu_rebuild_needed', TRUE);
+  }
+}
+
+/**
  * Implements hook_payment_method_delete().
  */
 function stripe_payment_payment_method_delete(\PaymentMethod $method) {
@@ -316,6 +360,9 @@ function stripe_payment_payment_method_delete(\PaymentMethod $method) {
           watchdog('stripe_payment', $message, $variables, WATCHDOG_WARNING);
         }
       }
+    }
+    if ($method->controller instanceof PaymentRequestController) {
+      variable_set('menu_rebuild_needed', TRUE);
     }
   }
 }
