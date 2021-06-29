@@ -16,7 +16,8 @@ Drupal.behaviors.stripe_payment.attach = function (context, settings) {
     }
     const $method = $(this).closest('.payment-method-form')
     const pmid = $method.attr('data-pmid')
-    const element = new MethodElement($method, settings.stripe_payment['pmid_' + pmid])
+    const methodSettings = settings.stripe_payment['pmid_' + pmid]
+    const element = new MethodElement($method, methodSettings)
 
     Drupal.payment_handler[pmid] = function (pmid, $method, submitter) {
       element.validate(submitter)

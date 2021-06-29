@@ -1,26 +1,8 @@
 /* global Drupal, jQuery, Stripe */
 
+import { deepSet, camelCase } from './utils'
+
 const $ = jQuery
-
-function deepSet (obj, keys, value) {
-  const key = keys.shift()
-  if (keys.length > 0) {
-    if (typeof obj[key] === 'undefined') {
-      obj[key] = {}
-    }
-    deepSet(obj[key], keys, value)
-  }
-  else {
-    obj[key] = value
-  }
-}
-
-/**
- * Convert kebap and snake case strings to camel case.
- */
-function camelCase (str) {
-  return str.replace(/[-_]([a-z])/g, (g) => g[1].toUpperCase())
-}
 
 /**
  * Representing a Stripe payment method element
