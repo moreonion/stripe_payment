@@ -2,6 +2,7 @@
 
 import regeneratorRuntime from 'regenerator-runtime'
 import { MethodElement } from './method-element'
+import { MethodButton } from './method-button'
 
 const $ = jQuery
 Drupal.behaviors.stripe_payment = {}
@@ -17,7 +18,8 @@ Drupal.behaviors.stripe_payment.attach = function (context, settings) {
     const $method = $(this).closest('.payment-method-form')
     const pmid = $method.attr('data-pmid')
     const methodSettings = settings.stripe_payment['pmid_' + pmid]
-    const element = new MethodElement($method, methodSettings)
+    const MethodClass = methodSettings.button ? MethodButton : MethodElement
+    const element = new MethodClass($method, methodSettings)
 
     Drupal.payment_handler[pmid] = function (pmid, $method, submitter) {
       element.validate(submitter)
