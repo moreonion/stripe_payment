@@ -117,7 +117,7 @@ function stripe_payment_libraries_info() {
 /**
  * Implements hook_menu().
  */
-function stripe_payment_menu() {
+function stripe_payment_menu($has_apple_pay = NULL) {
   // Webhook handler.
   $items['stripe-payment/webhooks/pmid/%entity_object'] = [
     'title' => 'Stripe Webhook',
@@ -137,10 +137,10 @@ function stripe_payment_menu() {
     'weight' => 10,
   ];
   // Provide the Domain Association File for Apple Pay.
-  $apple_pay_methods = array_filter(entity_load('payment_method'), function ($m) {
+  $has_apple_pay = $has_apple_pay ?? (bool) array_filter(entity_load('payment_method'), function ($m) {
     return $m->controller instanceof PaymentRequestController && $m->enabled;
   });
-  if (!empty($apple_pay_methods)) {
+  if ($has_apple_pay) {
     $items['.well-known/apple-developer-merchantid-domain-association'] = [
       'title' => 'Apple Developer MerchantID Domain Association',
       'access callback' => TRUE,
