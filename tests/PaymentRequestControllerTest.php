@@ -7,14 +7,14 @@ use Upal\DrupalUnitTestCase;
 /**
  * Tests for the SEPA payment controller.
  */
-class CreditCardControllerTest extends DrupalUnitTestCase {
+class PaymentRequestControllerTest extends DrupalUnitTestCase {
 
   /**
    * Create a test payment method.
    */
   public function setUp() : void {
     parent::setUp();
-    $controller = payment_method_controller_load('stripe_payment_credit_card');
+    $controller = payment_method_controller_load('stripe_payment_payment_request');
     $method = entity_create('payment_method', [
       'controller' => $controller,
       'controller_data' => $controller->controller_data_defaults,

@@ -226,9 +226,9 @@ abstract class Utils {
   public static function getStatementDescriptor(string $s) {
     // Remove characters not allowed in bank statements: <, >, \, ", '.
     $s = preg_replace('(<|>|\\\\|"|\')', '', $s);
-    // Only return strings with a max length of 22 characters.
-    // (Stripe would not accept a longer string and cutting it off after 22 characters
-    // might produce a weird result on the subscriber’s bank statement.)
+    // Only return strings with a max length of 22 characters.(Stripe would not
+    // accept a longer string and cutting it off after 22 characters might
+    // produce a weird result on the subscriber’s bank statement.)
     return strlen($s) > 22 ? NULL : $s;
   }
 

@@ -24,6 +24,11 @@ class Api {
   const MODULE_URL = 'https://github.com/moreonion/stripe_payment';
   const PARTNER_KEY = 'pp_partner_FWt5K2Mb47nSUP';
 
+  /**
+   * Hardcoded module version number.
+   *
+   * @var string
+   */
   protected static $version = NULL;
 
   /**

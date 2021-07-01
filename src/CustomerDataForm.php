@@ -380,7 +380,7 @@ class CustomerDataForm {
     $customer = [];
     ElementTree::applyRecursively($element, function (&$element, $key, &$parent) use (&$customer) {
       if (isset($element['#stripe_customer_field'])) {
-        $this->deepSet($customer, explode('.', $element['#stripe_customer_field']), $element['#value']);
+        drupal_array_set_nested_value($customer, explode('.', $element['#stripe_customer_field']), $element['#value']);
       }
     });
     if (empty($customer['address']['line1'])) {
@@ -393,20 +393,6 @@ class CustomerDataForm {
     unset($customer['first_name']);
     unset($customer['last_name']);
     return $customer;
-  }
-
-  /**
-   * Helper for recursively settings values in arrays.
-   */
-  protected function deepSet(&$data, $keys, $value) {
-    $key = array_shift($keys);
-    if ($keys) {
-      $data += [$key => []];
-      $this->deepSet($data[$key], $keys, $value);
-    }
-    else {
-      $data[$key] = $value;
-    }
   }
 
 }

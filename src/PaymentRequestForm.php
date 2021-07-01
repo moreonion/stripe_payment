@@ -2,15 +2,15 @@
 
 namespace Drupal\stripe_payment;
 
-use Drupal\payment_forms\AccountForm;
+use Drupal\payment_forms\PaymentFormInterface;
 
 /**
- * Stripe SEPA form.
+ * Stripe Payment Request form.
  */
-class SepaForm extends AccountForm {
+class PaymentRequestForm implements PaymentFormInterface {
 
   /**
-   * Add form elements for Stripe SEPA payments.
+   * Add form elements for Stripe Payment Request payments.
    *
    * @param array $form
    *   The Drupal form array.
@@ -23,33 +23,28 @@ class SepaForm extends AccountForm {
    *   The updated form array.
    */
   public function form(array $form, array &$form_state, \Payment $payment) {
-    $form = parent::form($form, $form_state, $payment);
     $form = StripeForm::form($form, $form_state, $payment);
-
-    // Override payment fields.
-    $form['iban'] = [
-      '#type' => 'stripe_payment_field',
-      '#field_name' => 'iban',
-      '#parents' => ['iban'],
-      '#attributes' => [
-        'class' => ['iban'],
-      ],
-    ] + $form['ibanbic']['iban'];
-
-    // Remove unused default fields.
-    unset($form['holder']);
-    unset($form['ibanbic']);
-
-    // Display SEPA authorization text.
-    $message = variable_get_value('stripe_payment_sepa_authorization');
-    $form['sepa_authorization'] = [
+    $form['payment_request_button'] = [
       '#type' => 'container',
       '#attributes' => [
-        'class' => ['stripe-payment-sepa-authorization'],
+        'class' => ['stripe-payment-request-button'],
       ],
     ];
-    $form['sepa_authorization'][]['#markup'] = check_markup($message['value'], $message['format']);
-
+    $pmid = $payment->method->pmid;
+    $cd = $payment->method->controller_data;
+    $settings = &$form['#attached']['js'][0]['data']['stripe_payment']["pmid_$pmid"];
+    $settings['transaction'] = [
+      'country' => $cd['account_country'],
+      'currency' => strtolower($payment->currency_code),
+      'total' => [
+        'amount' => (int) ($payment->totalAmount(TRUE) * 100),
+        'label' => $payment->description,
+      ],
+    ];
+    $settings['button'] = [
+      'type' => $cd['button_type'],
+      'style' => $cd['button_style'],
+    ];
     return $form;
   }
 

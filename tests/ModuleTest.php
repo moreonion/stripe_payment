@@ -10,6 +10,16 @@ use Upal\DrupalUnitTestCase;
 class ModuleTest extends DrupalUnitTestCase {
 
   /**
+   * Test hook_menu() implementation.
+   */
+  public function testHookMenu() {
+    $items = stripe_payment_menu(FALSE);
+    $this->assertArrayNotHasKey('.well-known/apple-developer-merchantid-domain-association', $items);
+    $items = stripe_payment_menu(TRUE);
+    $this->assertArrayHasKey('.well-known/apple-developer-merchantid-domain-association', $items);
+  }
+
+  /**
    * Test the method form alter implementation.
    */
   public function testAdminFormAlter() {

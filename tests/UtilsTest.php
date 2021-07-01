@@ -208,32 +208,36 @@ class UtilsTest extends DrupalUnitTestCase {
       ],
     ]));
     $options = Utils::generateSubscriptions($payment);
-    $this->assertEqual([[
-      'subscription'=> [
-        'off_session' => TRUE,
-        'payment_behavior' => 'error_if_incomplete',
-        'prorate' => FALSE,
-        'billing_cycle_anchor' => $start_date->getTimeStamp(),
-        'items' => [[
-          'plan' => '1-monthly-item1-EUR',
-          'quantity' => 15,
-        ]],
+    $this->assertEqual([
+      [
+        'subscription' => [
+          'off_session' => TRUE,
+          'payment_behavior' => 'error_if_incomplete',
+          'prorate' => FALSE,
+          'billing_cycle_anchor' => $start_date->getTimeStamp(),
+          'items' => [
+            [
+              'plan' => '1-monthly-item1-EUR',
+              'quantity' => 15,
+            ],
+          ],
+        ],
+        'plan' => [
+          'id' => '1-monthly-item1-EUR',
+          'amount' => 100,
+          'currency' => 'EUR',
+          'interval' => 'month',
+          'interval_count' => 1,
+          'nickname' => '1 monthly Item 1 test in EUR',
+          'product' => 'item1',
+        ],
+        'product' => [
+          'id' => 'item1',
+          'name' => 'Item 1 test',
+          'statement_descriptor' => 'Item 1 test',
+        ],
       ],
-      'plan' => [
-        'id' => '1-monthly-item1-EUR',
-        'amount' => 100,
-        'currency' => 'EUR',
-        'interval' => 'month',
-        'interval_count' => 1,
-        'nickname' => '1 monthly Item 1 test in EUR',
-        'product' => 'item1',
-      ],
-      'product' => [
-        'id' => 'item1',
-        'name' => 'Item 1 test',
-        'statement_descriptor' => 'Item 1 test',
-      ],
-    ]], $options);
+    ], $options);
   }
 
   /**

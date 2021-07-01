@@ -9,6 +9,11 @@ use Stripe\Exception\ApiErrorException;
  */
 class StripeController extends \PaymentMethodController {
 
+  /**
+   * Default values for the controller configuration.
+   *
+   * @var array
+   */
   public $controller_data_defaults = [
     'private_key' => '',
     'public_key'  => '',
@@ -17,6 +22,11 @@ class StripeController extends \PaymentMethodController {
     'enable_recurrent_payments' => 1,
   ];
 
+  /**
+   * Settings for the Stripe intent.
+   *
+   * @var array
+   */
   public $intentSettings = [];
 
   /**
@@ -100,14 +110,14 @@ class StripeController extends \PaymentMethodController {
     if (empty($payment->method_data['stripe_id'])) {
       watchdog('stripe_payment', 'A payment was submitted without an intent.', [], WATCHDOG_WARNING);
       $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_NO_INTENT));
-      return;
+      return FALSE;
     }
     $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
 
     $api = Api::init($payment->method);
     $intent = $this->fetchIntent($payment, $api);
     entity_save('payment', $payment);
-    $this->createSubscriptions($payment, $api, $intent);
+    return $this->createSubscriptions($payment, $api, $intent);
   }
 
   /**
@@ -150,7 +160,10 @@ class StripeController extends \PaymentMethodController {
       }
       catch (ApiErrorException $e) {
         $message = 'Stripe API error for recurrent payment (pmid: @pmid). @description.';
-        $variables = ['@description' => $e->getMessage(), '@pmid' => $payment->method->pmid];
+        $variables = [
+          '@description' => $e->getMessage(),
+          '@pmid' => $payment->method->pmid,
+        ];
         watchdog('stripe_payment', $message, $variables, WATCHDOG_WARNING);
         $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
         entity_save('payment', $payment);
