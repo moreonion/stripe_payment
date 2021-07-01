@@ -6,6 +6,8 @@
  */
 
 use Drupal\stripe_payment\Api;
+use Drupal\stripe_payment\BacsController;
+use Drupal\stripe_payment\BacsControllerRecurrent;
 use Drupal\stripe_payment\CreditCardController;
 use Drupal\stripe_payment\CreditCardControllerRecurrent;
 use Drupal\stripe_payment\SepaController;
@@ -84,6 +86,7 @@ function stripe_payment_theme() {
 function stripe_payment_payment_method_controller_info() {
   $recurrent = module_exists('webform_paymethod_select') && interface_exists(PaymentRecurrentController::class, TRUE);
   return [
+    'stripe_payment_bacs' => $recurrent ? BacsControllerRecurrent::class : BacsController::class,
     'stripe_payment_credit_card' => $recurrent ? CreditCardControllerRecurrent::class : CreditCardController::class,
     'stripe_payment_sepa' => $recurrent ? SepaControllerRecurrent::class : SepaController::class,
   ];
