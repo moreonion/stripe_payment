@@ -8,6 +8,8 @@
 use Drupal\stripe_payment\Api;
 use Drupal\stripe_payment\CreditCardController;
 use Drupal\stripe_payment\CreditCardControllerRecurrent;
+use Drupal\stripe_payment\PaymentRequestController;
+use Drupal\stripe_payment\PaymentRequestControllerRecurrent;
 use Drupal\stripe_payment\SepaController;
 use Drupal\stripe_payment\SepaControllerRecurrent;
 use Drupal\stripe_payment\Utils;
@@ -85,6 +87,7 @@ function stripe_payment_payment_method_controller_info() {
   $recurrent = module_exists('webform_paymethod_select') && interface_exists(PaymentRecurrentController::class, TRUE);
   return [
     'stripe_payment_credit_card' => $recurrent ? CreditCardControllerRecurrent::class : CreditCardController::class,
+    'stripe_payment_payment_request' => $recurrent ? PaymentRequestControllerRecurrent::class : PaymentRequestController::class,
     'stripe_payment_sepa' => $recurrent ? SepaControllerRecurrent::class : SepaController::class,
   ];
 }
@@ -114,7 +117,7 @@ function stripe_payment_libraries_info() {
 /**
  * Implements hook_menu().
  */
-function stripe_payment_menu() {
+function stripe_payment_menu($has_apple_pay = NULL) {
   // Webhook handler.
   $items['stripe-payment/webhooks/pmid/%entity_object'] = [
     'title' => 'Stripe Webhook',
@@ -133,6 +136,17 @@ function stripe_payment_menu() {
     'access arguments' => ['payment.payment.administer'],
     'weight' => 10,
   ];
+  // Provide the Domain Association File for Apple Pay.
+  $has_apple_pay = $has_apple_pay ?? (bool) array_filter(entity_load('payment_method'), function ($m) {
+    return $m->controller instanceof PaymentRequestController && $m->enabled;
+  });
+  if ($has_apple_pay) {
+    $items['.well-known/apple-developer-merchantid-domain-association'] = [
+      'title' => 'Apple Developer MerchantID Domain Association',
+      'access callback' => TRUE,
+      'page callback' => 'stripe_payment_apple_pay_domain_association_file',
+    ];
+  }
   return $items;
 }
 
@@ -142,7 +156,10 @@ function stripe_payment_menu() {
 function stripe_payment_webhook($method) {
   if (!Utils::isStripeMethod($method)) {
     $message = "Received Stripe event for wrong payment method \"@method\" (pmid: @pmid).";
-    $variables = ['@method' => $method->controller->name, '@pmid' => $method->pmid];
+    $variables = [
+      '@method' => $method->controller->name,
+      '@pmid' => $method->pmid,
+    ];
     watchdog('stripe_payment', $message, $variables, WATCHDOG_ERROR);
     return 405;
   }
@@ -171,8 +188,14 @@ function stripe_payment_webhook($method) {
   }
 
   $event_types = [
-    'succeeded' => [Event::PAYMENT_INTENT_SUCCEEDED, Event::SETUP_INTENT_SUCCEEDED],
-    'failed' => [Event::PAYMENT_INTENT_PAYMENT_FAILED, Event::SETUP_INTENT_SETUP_FAILED],
+    'succeeded' => [
+      Event::PAYMENT_INTENT_SUCCEEDED,
+      Event::SETUP_INTENT_SUCCEEDED,
+    ],
+    'failed' => [
+      Event::PAYMENT_INTENT_PAYMENT_FAILED,
+      Event::SETUP_INTENT_SETUP_FAILED,
+    ],
   ];
   if (!in_array($event->type, array_merge($event_types['succeeded'], $event_types['failed']))) {
     return 'Ignoring unkown event';
@@ -216,6 +239,21 @@ function stripe_payment_webhook($method) {
   }
   entity_save('payment', $payment);
   return 'OK';
+}
+
+/**
+ * Menu callback returning the Stripe Domain Association File for Apple Pay.
+ *
+ * The file is a copy of
+ * https://stripe.com/files/apple-pay/apple-developer-merchantid-domain-association.
+ */
+function stripe_payment_apple_pay_domain_association_file() {
+  drupal_add_http_header('Content-type', 'application/octet-stream');
+  $path = drupal_get_path('module', 'stripe_payment');
+  $path .= '/static/apple-developer-merchantid-domain-association';
+  readfile($path);
+  drupal_page_footer();
+  exit;
 }
 
 /**
@@ -277,6 +315,24 @@ function stripe_payment_entity_load(array $entities, $entity_type) {
 }
 
 /**
+ * Implements hook_payment_method_insert().
+ */
+function stripe_payment_payment_method_insert(\PaymentMethod $method) {
+  if ($method->controller instanceof PaymentRequestController) {
+    variable_set('menu_rebuild_needed', TRUE);
+  }
+}
+
+/**
+ * Implements hook_payment_method_update().
+ */
+function stripe_payment_payment_method_update(\PaymentMethod $method) {
+  if ($method->controller instanceof PaymentRequestController) {
+    variable_set('menu_rebuild_needed', TRUE);
+  }
+}
+
+/**
  * Implements hook_payment_method_delete().
  */
 function stripe_payment_payment_method_delete(\PaymentMethod $method) {
@@ -289,15 +345,24 @@ function stripe_payment_payment_method_delete(\PaymentMethod $method) {
       catch (InvalidRequestException $e) {
         if ($e->getStripeCode() === 'resource_missing') {
           $message = 'No webhook found for pmid @pmid, nothing to delete. @description.';
-          $variables = ['@pmid' => $method->pmid, '@description' => $e->getMessage()];
+          $variables = [
+            '@pmid' => $method->pmid,
+            '@description' => $e->getMessage(),
+          ];
           watchdog('stripe_payment', $message, $variables, WATCHDOG_INFO);
         }
         else {
           $message = 'Could not delete webhook for pmid @pmid. @description.';
-          $variables = ['@pmid' => $method->pmid, '@description' => $e->getMessage()];
+          $variables = [
+            '@pmid' => $method->pmid,
+            '@description' => $e->getMessage(),
+          ];
           watchdog('stripe_payment', $message, $variables, WATCHDOG_WARNING);
         }
       }
+    }
+    if ($method->controller instanceof PaymentRequestController) {
+      variable_set('menu_rebuild_needed', TRUE);
     }
   }
 }

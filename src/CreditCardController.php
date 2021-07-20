@@ -13,7 +13,7 @@ class CreditCardController extends StripeController {
   public function __construct() {
     $this->title = t('Stripe Credit Card');
     $this->intentSettings = [
-      'payment_method_types' => ['card']
+      'payment_method_types' => ['card'],
     ];
     parent::__construct();
   }
