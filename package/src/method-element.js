@@ -148,9 +148,9 @@ class MethodElement {
   }
 
   /**
-   * Read values from extra data fields.
+   * Read values for Stripe payment method from extra data and Stripe fields.
    */
-  extraData () {
+  paymentMethodData () {
     const data = {}
     this.$element.find('[data-stripe]').each((i, field) => {
       const keys = field.dataset.stripe.split('.')
@@ -159,6 +159,8 @@ class MethodElement {
         deepSet(data, keys, value)
       }
     })
+    data.card = this.stripeElements.getElement('cardNumber')
+    data.sepa_debit = this.stripeElements.getElement('iban')
     return data
   }
 
@@ -186,14 +188,11 @@ class MethodElement {
       this.intent = await this.fetchIntent()
     }
     const name = camelCase(this.intent.type)
-    const data = { payment_method: this.extraData() }
     let handler
     if (this.intent.methods.includes('sepa_debit')) {
-      data.payment_method.sepa_debit = this.stripeElements.getElement('iban')
       handler = name === 'setupIntent' ? 'confirmSepaDebitSetup' : 'confirmSepaDebitPayment'
     }
     else {
-      data.payment_method.card = this.stripeElements.getElement('cardNumber')
       handler = name === 'setupIntent' ? 'confirmCardSetup' : 'confirmCardPayment'
     }
     if (this.intent.form_build_id) {
@@ -201,7 +200,6 @@ class MethodElement {
     }
     return {
       name: name,
-      data: data,
       handler: this.stripe[handler],
       secret: this.intent.client_secret,
     }
@@ -214,8 +212,9 @@ class MethodElement {
   async validate (submitter) {
     this.resetValidation()
     const intent = await this.intentData()
-    const result = await intent.handler(
-      intent.secret, intent.data
+    const result = await this.handler(
+      intent.secret,
+      { payment_method: this.paymentMethodData() }
     )
     if (result.error) {
       this.errorHandler(result.error)
