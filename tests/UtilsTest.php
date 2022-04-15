@@ -213,7 +213,7 @@ class UtilsTest extends DrupalUnitTestCase {
         'subscription' => [
           'off_session' => TRUE,
           'payment_behavior' => 'error_if_incomplete',
-          'prorate' => FALSE,
+          'proration_behavior' => 'none',
           'billing_cycle_anchor' => $start_date->getTimeStamp(),
           'items' => [
             [

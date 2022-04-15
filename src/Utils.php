@@ -139,7 +139,7 @@ abstract class Utils {
       'off_session' => TRUE,
       'payment_behavior' => 'error_if_incomplete',
       // Start with the next full billing cycle.
-      'prorate' => FALSE,
+      'proration_behavior' => 'none',
     ];
     if ($start_date = self::getStartDate($line_item)) {
       $options['billing_cycle_anchor'] = $start_date->getTimestamp();

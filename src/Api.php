@@ -19,7 +19,7 @@ use Stripe\WebhookEndpoint;
  */
 class Api {
 
-  const API_VERSION = '2019-09-09';
+  const API_VERSION = '2020-08-27';
   const MODULE_BRANCH = '7.x-1.x';
   const MODULE_URL = 'https://github.com/moreonion/stripe_payment';
   const PARTNER_KEY = 'pp_partner_FWt5K2Mb47nSUP';
