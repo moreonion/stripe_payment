@@ -136,19 +136,19 @@ class Api {
   /**
    * Create a new customer using the API.
    *
-   * @param \Stripe\PaymentIntent|\Stripe\SetupIntent $intent
-   *   The intent object with the customers payment data.
+   * @param string $payment_method_id
+   *   The id of the customer’s payment method.
    * @param array $extra_data
    *   Additional data about the customer.
    *
    * @return \Stripe\Customer
    *   The customer.
    */
-  public function createCustomer($intent, array $extra_data) {
+  public function createCustomer(string $payment_method_id, array $extra_data) {
     return Customer::create([
-      'payment_method' => $intent->payment_method,
+      'payment_method' => $payment_method_id,
       'invoice_settings' => [
-        'default_payment_method' => $intent->payment_method,
+        'default_payment_method' => $payment_method_id,
       ],
     ] + $extra_data);
   }

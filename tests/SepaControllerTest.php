@@ -101,6 +101,7 @@ class SepaControllerTest extends DrupalUnitTestCase {
       'last4' => '1234',
     ];
     $intent['charges']['data'][] = $charge;
+    $intent['payment_method'] = ['id' => 'pm_testpaymentmethod'];
     $mandate['payment_method_details']['sepa_debit']['reference'] = 'TEST-SEPA-REFERENCE';
     $api->expects($this->once())
       ->method('retrieveIntent')

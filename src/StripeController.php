@@ -117,7 +117,10 @@ class StripeController extends \PaymentMethodController {
     $api = Api::init($payment->method);
     $intent = $this->fetchIntent($payment, $api);
     entity_save('payment', $payment);
-    return $this->createSubscriptions($payment, $api, $intent);
+
+    // The `payment_method` is expanded for sepa but not credit card payments.
+    $stripe_pm = $intent->payment_method->id ?? $intent->payment_method;
+    return $this->createSubscriptions($payment, $api, $stripe_pm);
   }
 
   /**
@@ -135,11 +138,11 @@ class StripeController extends \PaymentMethodController {
   /**
    * Create subscriptions for recurrent payments.
    */
-  protected function createSubscriptions(\Payment $payment, Api $api, $intent) {
+  protected function createSubscriptions(\Payment $payment, Api $api, string $stripe_pm) {
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     if ($recurring->line_items) {
       try {
-        $customer = $api->createCustomer($intent, $payment->method_data['customer']);
+        $customer = $api->createCustomer($stripe_pm, $payment->method_data['customer']);
         foreach (Utils::generateSubscriptions($recurring) as $subscription_options) {
           $subscription = $api->createSubscription(['customer' => $customer->id] + $subscription_options);
           db_insert('stripe_payment_subscriptions')
