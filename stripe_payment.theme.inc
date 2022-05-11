@@ -14,9 +14,13 @@
  */
 function template_process_stripe_payment_field(&$vars) {
   $vars['attributes'] = $vars['element']['#attributes'] ?? [];
+  $parents = $vars['element']['#parents'];
+  $name = array_shift($parents);
+  $name .= $parents ? '[' . implode('][', $parents) . ']' : '';
   $vars['attributes'] += [
     'id' => $vars['element']['#id'] ?? drupal_html_id('stripe-payment-field'),
     'data-stripe-element' => $vars['element']['#field_name'],
+    'name' => $name,
   ];
   $vars['attributes']['class'][] = 'stripe-payment-field-iframe-wrapper';
   $vars['attributes']['class'][] = 'text-input';
