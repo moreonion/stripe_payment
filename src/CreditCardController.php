@@ -28,4 +28,25 @@ class CreditCardController extends StripeController {
     return new CreditCardForm();
   }
 
+  /**
+   * Check whether this payment method is available for a payment.
+   *
+   * @param \Payment $payment
+   *   The payment to validate.
+   * @param \PaymentMethod $method
+   *   The payment method to check against.
+   * @param bool $strict
+   *   Whether to validate everything a payment for this method needs.
+   *
+   * @throws PaymentValidationException
+   */
+  public function validate(\Payment $payment, \PaymentMethod $method, $strict) {
+    parent::validate($payment, $method, $strict);
+
+    list($one_off, $recurring) = Utils::splitRecurring($payment);
+    if (!$one_off->line_items && count($recurring->line_items) > 1) {
+      throw new \PaymentValidationException(t('This payment method can only handle a single recurrent line item.'));
+    }
+  }
+
 }

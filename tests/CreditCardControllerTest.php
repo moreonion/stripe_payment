@@ -44,6 +44,18 @@ class CreditCardControllerTest extends DrupalUnitTestCase {
   }
 
   /**
+   * Create a new example payment.
+   */
+  protected function createPayment() {
+    return $payment = new \Payment([
+      'description' => 'test payment',
+      'currency_code' => 'EUR',
+      'method' => $this->method,
+      'finish_callback' => 'webform_paymethod_select_payment_finish',
+    ]);
+  }
+
+  /**
    * Test executing without a prior AJAX call to create an intent.
    */
   public function testExecuteWithoutIntent() {
@@ -273,6 +285,70 @@ class CreditCardControllerTest extends DrupalUnitTestCase {
       'needs_confirmation' => FALSE,
     ], $result);
     $this->assertObjectNotHasAttribute('stripe', $payment);
+  }
+
+  /**
+   * Test method can be used with 1 recurring line item.
+   */
+  public function testValidateSingleRecurringLineItem() {
+    $payment = $this->createPayment();
+    $payment->setLineItem(new \PaymentLineItem([
+      'name' => 'test',
+      'amount' => 10,
+      'recurrence' => (object) [
+        'interval_unit' => 'monthly',
+      ],
+    ]));
+    $this->assertNull($this->method->controller->validate($payment, $this->method, TRUE));
+  }
+
+  /**
+   * Test method can be used with mixed line item.
+   */
+  public function testValidateMixedLineItems() {
+    $payment = $this->createPayment();
+    $payment->setLineItem(new \PaymentLineItem([
+      'name' => 'test-1',
+      'amount' => 100,
+    ]));
+    $payment->setLineItem(new \PaymentLineItem([
+      'name' => 'test-m',
+      'amount' => 10,
+      'recurrence' => (object) [
+        'interval_unit' => 'monthly',
+      ],
+    ]));
+    $payment->setLineItem(new \PaymentLineItem([
+      'name' => 'test-y',
+      'amount' => 50,
+      'recurrence' => (object) [
+        'interval_unit' => 'yearly',
+      ],
+    ]));
+    $this->assertNull($this->method->controller->validate($payment, $this->method, TRUE));
+  }
+
+  /**
+   * Test method throws exception for >1 recurring line item.
+   */
+  public function testValidateTooManyRecurringLineItems() {
+    $payment = $this->createPayment();
+    $payment->setLineItem(new \PaymentLineItem([
+      'name' => 'test-m',
+      'amount' => 10,
+      'recurrence' => (object) [
+        'interval_unit' => 'monthly',
+      ],
+    ]));
+    $payment->setLineItem(new \PaymentLineItem([
+      'name' => 'test-y',
+      'amount' => 50,
+      'recurrence' => (object) [
+        'interval_unit' => 'yearly',
+      ],
+    ]));
+    $this->expectException(\PaymentValidationException::class);
+    $this->method->controller->validate($payment, $this->method, TRUE);
   }
 
   /**
