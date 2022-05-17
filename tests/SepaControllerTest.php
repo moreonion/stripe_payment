@@ -91,7 +91,7 @@ class SepaControllerTest extends DrupalUnitTestCase {
   }
 
   /**
-   * Test that $payment->stripe_sepa is not set for one-off payments.
+   * Test one-off payments.
    */
   public function testExecuteOneOff() {
     $method = $this->method;

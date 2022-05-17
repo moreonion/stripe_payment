@@ -169,8 +169,11 @@ class MethodElement {
    */
   fetchIntent () {
     const form = this.$element.closest('form').get(0)
-    const formData = new FormData()
+    const formData = new FormData(form)
     formData.append('form_build_id', form.form_build_id.value)
+    if (this.paymentMethod) {
+      formData.append('stripe_pm', this.paymentMethod.id)
+    }
     return $.ajax({
       type: 'POST',
       url: this.settings.intent_callback_url,
@@ -202,6 +205,7 @@ class MethodElement {
       name: name,
       handler: this.stripe[handler],
       secret: this.intent.client_secret,
+      needsConfirmation: this.intent.needs_confirmation,
     }
   }
 
@@ -211,11 +215,26 @@ class MethodElement {
    */
   async validate (submitter) {
     this.resetValidation()
+    if (!this.intent && !this.paymentMethod && this.settings.create_payment_method) {
+      const pmResult = await this.stripe.createPaymentMethod({
+        type: 'card',
+        ...this.paymentMethodData(),
+      })
+      if (pmResult.error) {
+        this.errorHandler(pmResult.error)
+        submitter.error()
+        return
+      }
+      this.paymentMethod = pmResult.paymentMethod
+    }
     const intent = await this.intentData()
-    const result = await this.handler(
-      intent.secret,
-      { payment_method: this.paymentMethodData() }
-    )
+    if (!intent.needsConfirmation) {
+      this.setStripeId('seti_0000')
+      submitter.ready()
+      return
+    }
+    const data = this.paymentMethod ? {} : { payment_method: this.paymentMethodData() }
+    const result = await intent.handler(intent.secret, data)
     if (result.error) {
       this.errorHandler(result.error)
       submitter.error()
