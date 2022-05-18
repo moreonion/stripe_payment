@@ -7,6 +7,7 @@ use Upal\DrupalUnitTestCase;
 use Stripe\Customer;
 use Stripe\PaymentIntent;
 use Stripe\Subscription;
+use Stripe\Exception\InvalidRequestException;
 
 /**
  * Tests for the SEPA payment controller.
@@ -285,6 +286,39 @@ class CreditCardControllerTest extends DrupalUnitTestCase {
       'needs_confirmation' => FALSE,
     ], $result);
     $this->assertObjectNotHasAttribute('stripe', $payment);
+  }
+
+  /**
+   * Test API error during AJAX callback returns error.
+   */
+  public function testAjaxCallbackApiError() {
+    $method = $this->method;
+    $payment = entity_create('payment', [
+      'description' => 'test payment',
+      'currency_code' => 'EUR',
+      'method' => $method,
+      'method_data' => ['customer' => ['name' => 'Tester']],
+    ]);
+    $start_date = (new \DateTimeImmutable('', new \DateTimeZone('UTC')))->modify('+10 day');
+    $payment->setLineItem(new \PaymentLineItem([
+      'name' => 'item1',
+      'description' => 'Item 1 test',
+      'amount' => 3,
+      'quantity' => 5,
+      'recurrence' => (object) [
+        'interval_unit' => 'monthly',
+        'interval_value' => 1,
+        'start_date' => $start_date->format('Y-m-d'),
+      ],
+    ]));
+    $form_state = ['input' => ['stripe_pm' => 'pm_testpaymentmethod']];
+    $api = $this->createMock(Api::class);
+    $api->expects($this->once())
+      ->method('createCustomer')
+      ->willThrowException(new InvalidRequestException('Missing required argument'));
+    $method->api = $api;
+    $result = $method->controller->ajaxCallback($payment, [], $form_state);
+    $this->assertEqual(['error' => ['message' => 'Payment failed.']], $result);
   }
 
   /**

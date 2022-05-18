@@ -222,6 +222,9 @@ class StripeController extends \PaymentMethodController {
       if ($subscriptions['success']) {
         $intent = $subscriptions['intent'];
       }
+      else {
+        return ["error" => ["message" => t("Payment failed.")]];
+      }
     }
     // Create a new intent for the payment.
     else {

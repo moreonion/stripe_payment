@@ -188,7 +188,11 @@ class MethodElement {
    */
   async intentData () {
     if (!this.intent) {
-      this.intent = await this.fetchIntent()
+      const result = await this.fetchIntent()
+      if (result.error) {
+        return result
+      }
+      this.intent = result
     }
     const name = camelCase(this.intent.type)
     let handler
@@ -215,6 +219,7 @@ class MethodElement {
    */
   async validate (submitter) {
     this.resetValidation()
+    // Create payment method on Stripe if needed.
     if (!this.intent && !this.paymentMethod && this.settings.create_payment_method) {
       const pmResult = await this.stripe.createPaymentMethod({
         type: 'card',
@@ -227,12 +232,19 @@ class MethodElement {
       }
       this.paymentMethod = pmResult.paymentMethod
     }
+    // Fetch intent data via Drupal.
     const intent = await this.intentData()
+    if (intent.error) {
+      this.errorHandler(intent.error)
+      submitter.error()
+      return
+    }
     if (!intent.needsConfirmation) {
-      this.setStripeId('seti_0000')
+      this.setStripeId('seti_0000') // Set a dummy ID to verify the submission.
       submitter.ready()
       return
     }
+    // Update and confirm event on Stripe.
     const data = this.paymentMethod ? {} : { payment_method: this.paymentMethodData() }
     const result = await intent.handler(intent.secret, data)
     if (result.error) {
