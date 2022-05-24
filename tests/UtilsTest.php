@@ -196,6 +196,7 @@ class UtilsTest extends DrupalUnitTestCase {
       'controller' => payment_method_controller_load('stripe_payment_credit_card'),
     ]);
     $payment = new \Payment([
+      'pid' => 1,
       'description' => 'test payment',
       'currency_code' => 'EUR',
       'method' => $method,
@@ -241,6 +242,9 @@ class UtilsTest extends DrupalUnitTestCase {
           'id' => 'item1',
           'name' => 'Item 1 test',
           'statement_descriptor' => 'Item 1 test',
+        ],
+        'metadata' => [
+          'IST_pid' => 1,
         ],
       ],
     ], $options);

@@ -153,7 +153,7 @@ class StripeController extends \PaymentMethodController {
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     if ($recurring->line_items) {
       try {
-        $customer = $api->createCustomer($stripe_pm, $payment->method_data['customer']);
+        $customer = $api->createCustomer($stripe_pm, $payment);
         foreach (Utils::generateSubscriptions($recurring) as $subscription_options) {
           $subscription = $api->createSubscription(['customer' => $customer->id] + $subscription_options);
           db_insert('stripe_payment_subscriptions')
@@ -203,6 +203,8 @@ class StripeController extends \PaymentMethodController {
    */
   public function ajaxCallback(\Payment $payment, array $form, array $form_state) {
     $api = Api::init($payment->method);
+    // Save payment to make sure pid is set.
+    entity_save('payment', $payment);
     // A payment intent has already been created, we can fetch it again.
     if (!empty($payment->stripe['stripe_id'])) {
       $intent = $api->retrieveIntent($payment->stripe['stripe_id']);
@@ -210,8 +212,6 @@ class StripeController extends \PaymentMethodController {
     // A payment method was created client side, this means we have to create a
     // subscription first and then use the intent that comes with it.
     elseif ($stripe_pm = $form_state['input']['stripe_pm'] ?? NULL) {
-      // Save payment to make sure pid is set.
-      entity_save('payment', $payment);
       // Add customer data from form.
       if (!isset($payment->method_data['customer'])) {
         $customer_data_form = $payment->method->controller->customerDataForm();

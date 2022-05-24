@@ -41,6 +41,7 @@ abstract class Utils {
     $common = [
       'currency_code' => $payment->currency_code,
       'method' => $payment->method,
+      'pid' => $payment->pid,
     ];
     return [
       new \Payment(['line_items' => $items[FALSE]] + $common),
@@ -76,6 +77,7 @@ abstract class Utils {
         'subscription' => $subscription,
         'plan' => $plan,
         'product' => $product,
+        'metadata' => self::metadata($payment),
       ];
     }
     return $options;
@@ -157,6 +159,21 @@ abstract class Utils {
       $options['billing_cycle_anchor'] = $start_date->getTimestamp();
     }
     return $options;
+  }
+
+  /**
+   * Generate metadata for a payment.
+   *
+   * @param \Payment $payment
+   *   The payment.
+   *
+   * @return array
+   *   A metadata array including pid (if set yet).
+   */
+  public static function metadata(\Payment $payment) {
+    return [
+      'IST_pid' => $payment->pid ?? NULL,
+    ];
   }
 
   /**

@@ -82,6 +82,7 @@ class Api {
    */
   public function createIntent(\Payment $payment) {
     $settings = $payment->method->controller->intentSettings;
+    $settings['metadata'] = Utils::metadata($payment);
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     // PaymentIntent: Make a payment immediately.
     if ($one_off->line_items) {
@@ -138,19 +139,20 @@ class Api {
    *
    * @param string $payment_method_id
    *   The id of the customer’s payment method.
-   * @param array $extra_data
-   *   Additional data about the customer.
+   * @param \Payment $payment
+   *   Payment object containing additional data about the customer.
    *
    * @return \Stripe\Customer
    *   The customer.
    */
-  public function createCustomer(string $payment_method_id, array $extra_data) {
+  public function createCustomer(string $payment_method_id, \Payment $payment) {
     return Customer::create([
       'payment_method' => $payment_method_id,
       'invoice_settings' => [
         'default_payment_method' => $payment_method_id,
       ],
-    ] + $extra_data);
+      'metadata' => Utils::metadata($payment),
+    ] + $payment->method_data['customer']);
   }
 
   /**
@@ -167,7 +169,10 @@ class Api {
   public function createSubscription(array $options) {
     try {
       // Assuming the plan already exists.
-      $subscription = Subscription::create(['customer' => $options['customer']] + $options['subscription']);
+      $subscription = Subscription::create([
+        'customer' => $options['customer'],
+        'metadata' => $options['metadata'],
+      ] + $options['subscription']);
     }
     catch (InvalidRequestException $e) {
       if ($e->getStripeCode() !== 'resource_missing') {
@@ -185,7 +190,10 @@ class Api {
         $options['plan']['product'] = $options['product'];
         Plan::create($options['plan']);
       }
-      $subscription = Subscription::create(['customer' => $options['customer']] + $options['subscription']);
+      $subscription = Subscription::create([
+        'customer' => $options['customer'],
+        'metadata' => $options['metadata'],
+      ] + $options['subscription']);
     }
     return $subscription;
   }
