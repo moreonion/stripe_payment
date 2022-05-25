@@ -137,7 +137,7 @@ class Api {
   /**
    * Create a new customer using the API.
    *
-   * @param string $payment_method_id
+   * @param string $stripe_pm
    *   The id of the customer’s payment method.
    * @param \Payment $payment
    *   Payment object containing additional data about the customer.
@@ -145,11 +145,11 @@ class Api {
    * @return \Stripe\Customer
    *   The customer.
    */
-  public function createCustomer(string $payment_method_id, \Payment $payment) {
+  public function createCustomer(string $stripe_pm, \Payment $payment) {
     return Customer::create([
-      'payment_method' => $payment_method_id,
+      'payment_method' => $stripe_pm,
       'invoice_settings' => [
-        'default_payment_method' => $payment_method_id,
+        'default_payment_method' => $stripe_pm,
       ],
       'metadata' => Utils::metadata($payment),
     ] + $payment->method_data['customer']);
