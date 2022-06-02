@@ -114,10 +114,23 @@ class StripeController extends \PaymentMethodController {
     }
     $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_ACCEPTED));
 
+    $subscriptions = db_query(
+      'SELECT stripe_id from stripe_payment_subscriptions WHERE pid=:pid',
+      [':pid' => $payment->pid]
+    )->fetchCol();
+    if ($subscriptions) {
+      entity_save('payment', $payment);
+      return TRUE;
+    }
+
     $api = Api::init($payment->method);
     $intent = $this->fetchIntent($payment, $api);
     entity_save('payment', $payment);
-    return $this->createSubscriptions($payment, $api, $intent);
+
+    // The `payment_method` is expanded for sepa but not credit card payments.
+    $stripe_pm = $intent->payment_method->id ?? $intent->payment_method;
+    $subscriptions = $this->createSubscriptions($payment, $api, $stripe_pm);
+    return $subscriptions['success'];
   }
 
   /**
@@ -135,11 +148,12 @@ class StripeController extends \PaymentMethodController {
   /**
    * Create subscriptions for recurrent payments.
    */
-  protected function createSubscriptions(\Payment $payment, Api $api, $intent) {
+  protected function createSubscriptions(\Payment $payment, Api $api, string $stripe_pm) {
+    $intent = NULL;
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     if ($recurring->line_items) {
       try {
-        $customer = $api->createCustomer($intent, $payment->method_data['customer']);
+        $customer = $api->createCustomer($stripe_pm, $payment);
         foreach (Utils::generateSubscriptions($recurring) as $subscription_options) {
           $subscription = $api->createSubscription(['customer' => $customer->id] + $subscription_options);
           db_insert('stripe_payment_subscriptions')
@@ -150,13 +164,24 @@ class StripeController extends \PaymentMethodController {
               'amount' => $subscription->plan->amount * $subscription->quantity / 100,
               'billing_cycle_anchor' => $subscription->billing_cycle_anchor,
             ])->execute();
+          // If there’s no intent yet, try to get one from the subscriptions.
+          if (empty($payment->stripe['stripe_id'])) {
+            $intent = $subscription->latest_invoice->payment_intent ?? $subscription->pending_setup_intent;
+            if ($intent) {
+              $payment->stripe = [
+                'stripe_id' => $intent->id,
+                'type' => $intent->object,
+              ];
+              entity_save('payment', $payment);
+            }
+          }
         }
       }
       catch (\UnexpectedValueException $e) {
         watchdog_exception('stripe_payment', $e, 'Impossible recurrence constraints.', [], WATCHDOG_ERROR);
         $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
         entity_save('payment', $payment);
-        return FALSE;
+        return ['success' => FALSE];
       }
       catch (ApiErrorException $e) {
         $message = 'Stripe API error for recurrent payment (pmid: @pmid). @description.';
@@ -167,18 +192,42 @@ class StripeController extends \PaymentMethodController {
         watchdog('stripe_payment', $message, $variables, WATCHDOG_WARNING);
         $payment->setStatus(new \PaymentStatusItem(PAYMENT_STATUS_FAILED));
         entity_save('payment', $payment);
-        return FALSE;
+        return ['success' => FALSE];
       }
     }
-    return TRUE;
+    return ['success' => TRUE, 'intent' => $intent];
   }
 
   /**
-   * Create a payment intent if this wasn’t done already.
+   * Create a payment intent if needed.
    */
-  public function ajaxCallback(\Payment $payment) {
+  public function ajaxCallback(\Payment $payment, array $form, array $form_state) {
     $api = Api::init($payment->method);
-    if (empty($payment->stripe['stripe_id'])) {
+    // Save payment to make sure pid is set.
+    entity_save('payment', $payment);
+    // A payment intent has already been created, we can fetch it again.
+    if (!empty($payment->stripe['stripe_id'])) {
+      $intent = $api->retrieveIntent($payment->stripe['stripe_id']);
+    }
+    // A payment method was created client side, this means we have to create a
+    // subscription first and then use the intent that comes with it.
+    elseif ($stripe_pm = $form_state['input']['stripe_pm'] ?? NULL) {
+      // Add customer data from form.
+      if (!isset($payment->method_data['customer'])) {
+        $customer_data_form = $payment->method->controller->customerDataForm();
+        $payment->method_data['customer'] = $customer_data_form->getData($form);
+      }
+      // Create subscription – returns an intent if confirmation is needed.
+      $subscriptions = $this->createSubscriptions($payment, $api, $stripe_pm);
+      if ($subscriptions['success']) {
+        $intent = $subscriptions['intent'];
+      }
+      else {
+        return ["error" => ["message" => t("Payment failed.")]];
+      }
+    }
+    // Create a new intent for the payment.
+    else {
       $intent = $api->createIntent($payment);
       $payment->stripe = [
         'stripe_id' => $intent->id,
@@ -186,13 +235,11 @@ class StripeController extends \PaymentMethodController {
       ];
       entity_save('payment', $payment);
     }
-    else {
-      $intent = $api->retrieveIntent($payment->stripe['stripe_id']);
-    }
     return [
-      'client_secret' => $intent->client_secret,
-      'type' => $intent->object,
-      'methods' => $intent->payment_method_types,
+      'client_secret' => $intent->client_secret ?? NULL,
+      'type' => $intent->object ?? 'no_intent',
+      'methods' => $intent->payment_method_types ?? [],
+      'needs_confirmation' => isset($intent),
     ];
   }
 

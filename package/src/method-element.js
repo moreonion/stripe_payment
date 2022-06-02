@@ -148,9 +148,9 @@ class MethodElement {
   }
 
   /**
-   * Read values from extra data fields.
+   * Read values for Stripe payment method from extra data and Stripe fields.
    */
-  extraData () {
+  paymentMethodData () {
     const data = {}
     this.$element.find('[data-stripe]').each((i, field) => {
       const keys = field.dataset.stripe.split('.')
@@ -159,6 +159,8 @@ class MethodElement {
         deepSet(data, keys, value)
       }
     })
+    data.card = this.stripeElements.getElement('cardNumber')
+    data.sepa_debit = this.stripeElements.getElement('iban')
     return data
   }
 
@@ -167,8 +169,11 @@ class MethodElement {
    */
   fetchIntent () {
     const form = this.$element.closest('form').get(0)
-    const formData = new FormData()
+    const formData = new FormData(form)
     formData.append('form_build_id', form.form_build_id.value)
+    if (this.paymentMethod) {
+      formData.append('stripe_pm', this.paymentMethod.id)
+    }
     return $.ajax({
       type: 'POST',
       url: this.settings.intent_callback_url,
@@ -183,17 +188,18 @@ class MethodElement {
    */
   async intentData () {
     if (!this.intent) {
-      this.intent = await this.fetchIntent()
+      const result = await this.fetchIntent()
+      if (result.error) {
+        return result
+      }
+      this.intent = result
     }
     const name = camelCase(this.intent.type)
-    const data = { payment_method: this.extraData() }
     let handler
     if (this.intent.methods.includes('sepa_debit')) {
-      data.payment_method.sepa_debit = this.stripeElements.getElement('iban')
       handler = name === 'setupIntent' ? 'confirmSepaDebitSetup' : 'confirmSepaDebitPayment'
     }
     else {
-      data.payment_method.card = this.stripeElements.getElement('cardNumber')
       handler = name === 'setupIntent' ? 'confirmCardSetup' : 'confirmCardPayment'
     }
     if (this.intent.form_build_id) {
@@ -201,9 +207,9 @@ class MethodElement {
     }
     return {
       name: name,
-      data: data,
       handler: this.stripe[handler],
       secret: this.intent.client_secret,
+      needsConfirmation: this.intent.needs_confirmation,
     }
   }
 
@@ -213,10 +219,34 @@ class MethodElement {
    */
   async validate (submitter) {
     this.resetValidation()
+    // Create payment method on Stripe if needed.
+    if (!this.intent && !this.paymentMethod && this.settings.create_payment_method) {
+      const pmResult = await this.stripe.createPaymentMethod({
+        type: 'card',
+        ...this.paymentMethodData(),
+      })
+      if (pmResult.error) {
+        this.errorHandler(pmResult.error)
+        submitter.error()
+        return
+      }
+      this.paymentMethod = pmResult.paymentMethod
+    }
+    // Fetch intent data via Drupal.
     const intent = await this.intentData()
-    const result = await intent.handler(
-      intent.secret, intent.data
-    )
+    if (intent.error) {
+      this.errorHandler(intent.error)
+      submitter.error()
+      return
+    }
+    if (!intent.needsConfirmation) {
+      this.setStripeId('seti_0000') // Set a dummy ID to verify the submission.
+      submitter.ready()
+      return
+    }
+    // Update and confirm event on Stripe.
+    const data = this.paymentMethod ? {} : { payment_method: this.paymentMethodData() }
+    const result = await intent.handler(intent.secret, data)
     if (result.error) {
       this.errorHandler(result.error)
       submitter.error()

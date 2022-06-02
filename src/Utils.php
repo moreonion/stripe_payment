@@ -38,7 +38,11 @@ abstract class Utils {
       $is_recurring = !empty($line_item->recurrence->interval_unit);
       $items[$is_recurring][$name] = $line_item;
     }
-    $common = ['currency_code' => $payment->currency_code];
+    $common = [
+      'currency_code' => $payment->currency_code,
+      'method' => $payment->method,
+      'pid' => $payment->pid,
+    ];
     return [
       new \Payment(['line_items' => $items[FALSE]] + $common),
       new \Payment(['line_items' => $items[TRUE]] + $common),
@@ -59,7 +63,7 @@ abstract class Utils {
     // Since we have a date per line item and Stripe per subscription
     // lets create a new subscription (with only 1 plan) for each line item.
     foreach (array_values($payment->line_items) as $line_item) {
-      $subscription = self::subscriptionData($line_item);
+      $subscription = self::subscriptionData($line_item, $payment->method);
       $plan = self::planData($line_item, $payment->currency_code);
       $product = self::productData($line_item);
       // Add product to plan.
@@ -73,6 +77,7 @@ abstract class Utils {
         'subscription' => $subscription,
         'plan' => $plan,
         'product' => $product,
+        'metadata' => self::metadata($payment),
       ];
     }
     return $options;
@@ -129,22 +134,46 @@ abstract class Utils {
    *
    * @param \PaymentLineItem $line_item
    *   A recurring line item.
+   * @param \PaymentMethod $method
+   *   The payment method for the line item.
    *
    * @return array
    *   A stub subscription data array (add 'customer' and 'items').
    */
-  public static function subscriptionData(\PaymentLineItem $line_item) {
+  public static function subscriptionData(\PaymentLineItem $line_item, \PaymentMethod $method) {
     $options = [
-      // Expect no more user interaction.
+      // Expect no user interaction for subscription payments.
       'off_session' => TRUE,
-      'payment_behavior' => 'error_if_incomplete',
+      // Confirm setup intent after the subscription is created.
+      'payment_behavior' => 'allow_incomplete',
       // Start with the next full billing cycle.
-      'prorate' => FALSE,
+      'proration_behavior' => 'none',
+      // Set payment method type.
+      'payment_settings' => [
+        'payment_method_types' => $method->controller->intentSettings["payment_method_types"],
+      ],
+      // Include intent data (if available).
+      'expand' => ['latest_invoice.payment_intent', 'pending_setup_intent'],
     ];
     if ($start_date = self::getStartDate($line_item)) {
       $options['billing_cycle_anchor'] = $start_date->getTimestamp();
     }
     return $options;
+  }
+
+  /**
+   * Generate metadata for a payment.
+   *
+   * @param \Payment $payment
+   *   The payment.
+   *
+   * @return array
+   *   A metadata array including pid (if set yet).
+   */
+  public static function metadata(\Payment $payment) {
+    return [
+      'IST_pid' => $payment->pid ?? NULL,
+    ];
   }
 
   /**

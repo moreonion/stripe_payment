@@ -412,6 +412,8 @@ function stripe_payment_payment_delete(\Payment $payment) {
   db_delete('stripe_payment')->condition('pid', $payment->pid)->execute();
   db_delete('stripe_payment_sepa_mandate_info')
     ->condition('pid', $payment->pid)->execute();
+  db_delete('stripe_payment_subscriptions')
+    ->condition('pid', $payment->pid)->execute();
 }
 
 /**

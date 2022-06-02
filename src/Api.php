@@ -19,7 +19,7 @@ use Stripe\WebhookEndpoint;
  */
 class Api {
 
-  const API_VERSION = '2019-09-09';
+  const API_VERSION = '2020-08-27';
   const MODULE_BRANCH = '7.x-1.x';
   const MODULE_URL = 'https://github.com/moreonion/stripe_payment';
   const PARTNER_KEY = 'pp_partner_FWt5K2Mb47nSUP';
@@ -82,6 +82,7 @@ class Api {
    */
   public function createIntent(\Payment $payment) {
     $settings = $payment->method->controller->intentSettings;
+    $settings['metadata'] = Utils::metadata($payment);
     list($one_off, $recurring) = Utils::splitRecurring($payment);
     // PaymentIntent: Make a payment immediately.
     if ($one_off->line_items) {
@@ -136,21 +137,22 @@ class Api {
   /**
    * Create a new customer using the API.
    *
-   * @param \Stripe\PaymentIntent|\Stripe\SetupIntent $intent
-   *   The intent object with the customers payment data.
-   * @param array $extra_data
-   *   Additional data about the customer.
+   * @param string $stripe_pm
+   *   The id of the customer’s payment method.
+   * @param \Payment $payment
+   *   Payment object containing additional data about the customer.
    *
    * @return \Stripe\Customer
    *   The customer.
    */
-  public function createCustomer($intent, array $extra_data) {
+  public function createCustomer(string $stripe_pm, \Payment $payment) {
     return Customer::create([
-      'payment_method' => $intent->payment_method,
+      'payment_method' => $stripe_pm,
       'invoice_settings' => [
-        'default_payment_method' => $intent->payment_method,
+        'default_payment_method' => $stripe_pm,
       ],
-    ] + $extra_data);
+      'metadata' => Utils::metadata($payment),
+    ] + $payment->method_data['customer']);
   }
 
   /**
@@ -167,7 +169,10 @@ class Api {
   public function createSubscription(array $options) {
     try {
       // Assuming the plan already exists.
-      $subscription = Subscription::create(['customer' => $options['customer']] + $options['subscription']);
+      $subscription = Subscription::create([
+        'customer' => $options['customer'],
+        'metadata' => $options['metadata'],
+      ] + $options['subscription']);
     }
     catch (InvalidRequestException $e) {
       if ($e->getStripeCode() !== 'resource_missing') {
@@ -185,7 +190,10 @@ class Api {
         $options['plan']['product'] = $options['product'];
         Plan::create($options['plan']);
       }
-      $subscription = Subscription::create(['customer' => $options['customer']] + $options['subscription']);
+      $subscription = Subscription::create([
+        'customer' => $options['customer'],
+        'metadata' => $options['metadata'],
+      ] + $options['subscription']);
     }
     return $subscription;
   }

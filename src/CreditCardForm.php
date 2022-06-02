@@ -26,6 +26,12 @@ class CreditCardForm extends _CreditCardForm {
     $form = parent::form($form, $form_state, $payment);
     $form = StripeForm::form($form, $form_state, $payment);
 
+    // Update settings.
+    $pmid = $payment->method->pmid;
+    $settings = &$form['#attached']['js'][0]['data']['stripe_payment']["pmid_$pmid"];
+    list($one_off, $recurring) = Utils::splitRecurring($payment);
+    $settings['create_payment_method'] = !$one_off->line_items;
+
     // Override payment fields.
     $form['credit_card_number'] = [
       '#type' => 'stripe_payment_field',
