@@ -17,7 +17,7 @@ class MethodElement {
     this.$element = $element
     this.settings = settings
     this.form_id = this.$element.closest('form').attr('id')
-    this.errorHandler = this.clientsideValidationEnabled ? this.clientsideValidationErrorHandler : this.fallbackErrorHandler
+    this.errorHandler = this.clientsideValidationEnabled() ? this.clientsideValidationErrorHandler : this.fallbackErrorHandler
     this.waitForLibrariesThenInit()
     this.intent = null
   }
