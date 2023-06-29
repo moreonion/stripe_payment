@@ -145,6 +145,8 @@ class CreditCardControllerTest extends DrupalUnitTestCase {
       'stripe_id' => $intent_data['id'],
       'type' => $intent_data['object'],
     ], $payment->stripe);
+    $this->assertEqual(STRIPE_PAYMENT_STATUS_INTENT_CREATED, $payment->getStatus()->status);
+    $this->assertTrue(payment_status_is_or_has_ancestor($payment->getStatus()->status, PAYMENT_STATUS_PENDING));
   }
 
   /**
@@ -235,6 +237,8 @@ class CreditCardControllerTest extends DrupalUnitTestCase {
       'stripe_id' => $intent_data['id'],
       'type' => $intent_data['object'],
     ], $payment->stripe);
+    $this->assertEqual(STRIPE_PAYMENT_STATUS_INTENT_CREATED, $payment->getStatus()->status);
+    $this->assertTrue(payment_status_is_or_has_ancestor($payment->getStatus()->status, PAYMENT_STATUS_PENDING));
   }
 
   /**
