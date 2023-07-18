@@ -235,6 +235,9 @@ class StripeController extends \PaymentMethodController {
       ];
       entity_save('payment', $payment);
     }
+    if ($intent->object ?? NULL) {
+      $payment->setStatus(new \PaymentStatusItem(STRIPE_PAYMENT_STATUS_INTENT_CREATED));
+    }
     return [
       'client_secret' => $intent->client_secret ?? NULL,
       'type' => $intent->object ?? 'no_intent',

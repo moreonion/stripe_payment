@@ -36,6 +36,14 @@ define('STRIPE_PAYMENT_STATUS_ACCEPTED', 'stripe_payment_status_accepted');
 define('STRIPE_PAYMENT_STATUS_NO_INTENT', 'stripe_payment_no_intent');
 
 /**
+ * Stripe specific payment status for when an intent has been created.
+ *
+ * This status is set after the backend (Drupal) has succesfully created a
+ * payment or setup intent.
+ */
+define('STRIPE_PAYMENT_STATUS_INTENT_CREATED', 'stripe_payment_intent_created');
+
+/**
  * Implements hook_payment_status_info().
  */
 function stripe_payment_payment_status_info() {
@@ -44,6 +52,11 @@ function stripe_payment_payment_status_info() {
       'parent' => PAYMENT_STATUS_SUCCESS,
       'status' => STRIPE_PAYMENT_STATUS_ACCEPTED,
       'title' => t('Accepted'),
+    ]),
+    new PaymentStatusInfo([
+      'parent' => PAYMENT_STATUS_PENDING,
+      'status' => STRIPE_PAYMENT_STATUS_INTENT_CREATED,
+      'title' => t('Payment or setup intent created'),
     ]),
     new PaymentStatusInfo([
       'parent' => PAYMENT_STATUS_FAILED,
