@@ -17,7 +17,7 @@ class MethodElement {
     this.$element = $element
     this.settings = settings
     this.form_id = this.$element.closest('form').attr('id')
-    this.errorHandler = this.clientsideValidationEnabled ? this.clientsideValidationErrorHandler : this.fallbackErrorHandler
+    this.errorHandler = this.clientsideValidationEnabled() ? this.clientsideValidationErrorHandler : this.fallbackErrorHandler
     this.waitForLibrariesThenInit()
     this.intent = null
   }
@@ -217,7 +217,7 @@ class MethodElement {
    * Validate the input data.
    * @param {object} submitter - The Drupal form submitter.
    */
-  async validate (submitter) {
+  async validate (submitter, paymethodSelect) {
     this.resetValidation()
     // Create payment method on Stripe if needed.
     if (!this.intent && !this.paymentMethod && this.settings.create_payment_method) {
@@ -241,6 +241,7 @@ class MethodElement {
     }
     if (!intent.needsConfirmation) {
       this.setStripeId('seti_0000') // Set a dummy ID to verify the submission.
+      paymethodSelect.showSuccess(Drupal.t('Payment successful!'))
       submitter.ready()
       return
     }
@@ -253,6 +254,7 @@ class MethodElement {
     }
     else {
       this.setStripeId(result[intent.name].id)
+      paymethodSelect.showSuccess(Drupal.t('Payment successful!'))
       submitter.ready()
     }
   }

@@ -21,8 +21,8 @@ Drupal.behaviors.stripe_payment.attach = function (context, settings) {
     const MethodClass = methodSettings.button ? MethodButton : MethodElement
     const element = new MethodClass($method, methodSettings)
 
-    Drupal.payment_handler[pmid] = function (pmid, $method, submitter) {
-      element.validate(submitter)
+    Drupal.payment_handler[pmid] = function (pmid, $method, submitter, paymethodSelect) {
+      element.validate(submitter, paymethodSelect)
     }
   })
 }
