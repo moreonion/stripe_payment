@@ -441,7 +441,9 @@ function _stripe_payment_validate_comma_separated_keys($element, &$form_state, $
  * Implements hook_d7csp_hosts().
  */
 function stripe_payment_d7csp_hosts() {
-  $hosts['frame-src'][] = 'https://js.stripe.com';
   $hosts['script-src'][] = 'https://js.stripe.com';
+  // Likely needed for 3DS iframes. Those are provided by the banks.
+  $hosts['frame-src'][] = '*';
+  $hosts['form-action'][] = '*';
   return $hosts;
 }
