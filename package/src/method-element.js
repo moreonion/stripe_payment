@@ -199,6 +199,13 @@ class MethodElement {
     if (this.intent.methods.includes('sepa_debit')) {
       handler = name === 'setupIntent' ? 'confirmSepaDebitSetup' : 'confirmSepaDebitPayment'
     }
+    else if (this.intent.methods.includes('bacs_debit')) {
+      data.payment_method.bacs_debit = {
+        account_number: this.$element.find('[name$="[account_number]"]').val(),
+        sort_code: this.$element.find('[name$="[sort_code]"]').val()
+      }
+      handler = name === 'setupIntent' ? 'confirmBacsDebitSetup' : 'confirmBacsDebitPayment'
+    }
     else {
       handler = name === 'setupIntent' ? 'confirmCardSetup' : 'confirmCardPayment'
     }
