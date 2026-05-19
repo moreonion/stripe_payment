@@ -87,8 +87,8 @@ class StripeConfigurationForm implements MethodFormInterface {
       drupal_set_message($library['error message'], 'error', FALSE);
     }
 
-    if (substr($cd['private_key'], 0, 3) != 'sk_') {
-      form_error($element['private_key'], t('Please enter a valid private key (starting with sk_).'));
+    if (!in_array(substr($cd['private_key'], 0, 3), ['rk_', 'sk_'])) {
+      form_error($element['private_key'], t('Please enter a valid private key (starting with sk_ or rk_).'));
     }
     else {
       libraries_load('stripe-php');
